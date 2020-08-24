@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import './App.css';
 import qs from 'qs';
 import { connect } from 'react-redux';
 import { getExperimentApi, getRunApi } from '../actions';

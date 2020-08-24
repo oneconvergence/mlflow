@@ -61,7 +61,7 @@ class Routes {
     // Convert boolean to enum to keep URL format extensible to adding new types of y axis scales
     const yAxisScale = yAxisLogScale ? 'log' : 'linear';
     return (
-      `/metric/${encodeURIComponent(metricKey)}?runs=${JSON.stringify(runUuids)}&` +
+      `?tab=metrics&runs=${JSON.stringify(runUuids)}&` +
       `experiment=${experimentId}` +
       `&plot_metric_keys=${JSON.stringify(finalPlotMetricKeys)}` +
       `&plot_layout=${JSON.stringify(plotLayout)}` +
