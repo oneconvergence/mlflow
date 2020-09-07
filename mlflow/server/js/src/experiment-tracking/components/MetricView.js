@@ -5,6 +5,7 @@ import Utils from '../../common/utils/Utils';
 import './MetricView.css';
 import { Experiment } from '../sdk/MlflowMessages';
 import { getExperiment, getRunTags } from '../reducers/Reducers';
+import { BreadcrumbTitle } from './BreadcrumbTitle';
 import MetricsPlotPanel from './MetricsPlotPanel';
 import { withRouter } from 'react-router-dom';
 
@@ -18,10 +19,19 @@ export class MetricViewImpl extends Component {
   };
 
   render() {
-    const { experiment, runUuids, metricKey } = this.props;
+    const { experiment, runUuids, runNames, metricKey, location } = this.props;
     const experimentId = experiment.experiment_id;
+    const { selectedMetricKeys } = Utils.getMetricPlotStateFromUrl(location.search);
     return (
       <div className='MetricView'>
+        <div className='header-container'>
+          <BreadcrumbTitle
+            experiment={experiment}
+            runNames={runNames}
+            runUuids={runUuids}
+            title={<span>{selectedMetricKeys.length > 1 ? 'Metrics' : selectedMetricKeys[0]}</span>}
+          />
+        </div>
         <MetricsPlotPanel {...{ experimentId, runUuids, metricKey }} />
       </div>
     );

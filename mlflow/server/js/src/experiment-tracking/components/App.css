@@ -65,6 +65,11 @@ a:hover, a:focus {
   width: 200px;
 }
 
+.App-content {
+  width: calc(100% - 128px);
+  margin: 0 64px 0 64px;
+}
+
 div.mlflow-logo {
   display: flex;
   float: left;

@@ -61,13 +61,14 @@ export class MetricPageImpl extends Component {
 }
 
 const mapStateToProps = (state, ownProps) => {
-  const { location, metricKey } = ownProps;
+  const { match, location } = ownProps;
   const searchValues = qs.parse(location.search);
   const runUuids = JSON.parse(searchValues['?runs']);
   let experimentId = null;
   if (searchValues.hasOwnProperty('experiment')) {
     experimentId = searchValues['experiment'];
   }
+  const { metricKey } = match.params;
   return {
     runUuids,
     metricKey,

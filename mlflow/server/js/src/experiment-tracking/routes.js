@@ -45,7 +45,7 @@ class Routes {
   static getMetricPageRoute(
     runUuids,
     metricKey,
-    experimentId,
+    experimentId="0",
     plotMetricKeys = null,
     plotLayout = {},
     selectedXAxis = X_AXIS_RELATIVE,
@@ -61,7 +61,7 @@ class Routes {
     // Convert boolean to enum to keep URL format extensible to adding new types of y axis scales
     const yAxisScale = yAxisLogScale ? 'log' : 'linear';
     return (
-      `?tab=metrics&runs=${JSON.stringify(runUuids)}&` +
+      `?runs=${JSON.stringify(runUuids)}&` +
       `experiment=${experimentId}` +
       `&plot_metric_keys=${JSON.stringify(finalPlotMetricKeys)}` +
       `&plot_layout=${JSON.stringify(plotLayout)}` +
@@ -70,7 +70,8 @@ class Routes {
       `&line_smoothness=${lineSmoothness}` +
       `&show_point=${showPoint}` +
       `&deselected_curves=${JSON.stringify(deselectedCurves)}` +
-      `&last_linear_y_axis_range=${JSON.stringify(lastLinearYAxisRange)}`
+      `&last_linear_y_axis_range=${JSON.stringify(lastLinearYAxisRange)}`+
+      `&tab=metrics`
     );
   }
 

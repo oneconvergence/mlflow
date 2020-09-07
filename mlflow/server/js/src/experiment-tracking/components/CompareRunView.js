@@ -1,19 +1,18 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import './App.css';
 import { getExperiment, getParams, getRunInfo, getRunTags } from '../reducers/Reducers';
 import { connect } from 'react-redux';
 import './CompareRunView.css';
 import { Experiment, RunInfo } from '../sdk/MlflowMessages';
 import { CompareRunScatter } from './CompareRunScatter';
 import CompareRunContour from './CompareRunContour';
-import Routes from '../routes';
-import { Link } from 'react-router-dom';
 import { getLatestMetrics } from '../reducers/MetricReducer';
-import { BreadcrumbTitle } from './BreadcrumbTitle';
 import CompareRunUtil from './CompareRunUtil';
 import Utils from '../../common/utils/Utils';
 import { Tabs } from 'antd';
 import ParallelCoordinatesPlotPanel from './ParallelCoordinatesPlotPanel';
+import MetricsPlotPanel from './MetricsPlotPanel';
 
 const { TabPane } = Tabs;
 
@@ -40,17 +39,11 @@ export class CompareRunView extends Component {
   }
 
   render() {
-    const { experiment } = this.props;
+    const { experiment, runUuids } = this.props;
     const experimentId = experiment.getExperimentId();
     const { runInfos, runNames } = this.props;
     return (
       <div className='CompareRunView'>
-        <div className='header-container'>
-          <BreadcrumbTitle
-            experiment={experiment}
-            title={'Comparing ' + this.props.runInfos.length + ' Runs'}
-          />
-        </div>
         <div className='responsive-table-container'>
           <table className='compare-table table'>
             <thead>
@@ -60,9 +53,7 @@ export class CompareRunView extends Component {
                 </th>
                 {this.props.runInfos.map((r) => (
                   <th scope='column' className='data-value' key={r.run_uuid}>
-                    <Link to={Routes.getRunPageRoute(r.getExperimentId(), r.getRunUuid())}>
-                      {r.getRunUuid()}
-                    </Link>
+                    {r.getRunUuid()}
                   </th>
                 ))}
               </tr>
@@ -100,7 +91,7 @@ export class CompareRunView extends Component {
                   );
                 })}
               </tr>
-              <tr>
+              {/* <tr>
                 <th
                   scope='rowgroup'
                   className='inter-title'
@@ -109,7 +100,7 @@ export class CompareRunView extends Component {
                   <h2>Parameters</h2>
                 </th>
               </tr>
-              {this.renderDataRows(this.props.paramLists, true)}
+              {this.renderDataRows(this.props.paramLists, true)} */}
               <tr>
                 <th
                   scope='rowgroup'
@@ -124,25 +115,16 @@ export class CompareRunView extends Component {
                 false,
                 (key, data) => {
                   return (
-                    <Link
-                      to={Routes.getMetricPageRoute(
-                        this.props.runInfos
-                          .map((info) => info.run_uuid)
-                          .filter((uuid, idx) => data[idx] !== undefined),
-                        key,
-                        experimentId,
-                      )}
-                      title='Plot chart'
-                    >
-                      {key}
-                      <i className='fas fa-chart-line' style={{ paddingLeft: '6px' }} />
-                    </Link>
+                    <div>{key}</div>
                   );
                 },
                 Utils.formatMetric,
               )}
             </tbody>
           </table>
+        </div>
+        <div style={{ marginBottom: 12, marginTop: 12 }}>
+          <MetricsPlotPanel {...{ experimentId, runUuids }} />
         </div>
         <Tabs>
           <TabPane tab='Scatter Plot' key='1'>

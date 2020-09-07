@@ -240,17 +240,50 @@ export class MlflowService {
    * @param {function} success
    * @param {function} error
    * @return {Promise}
+   * Please note that the params are empty here. Once we're able to fetch it,
+   * params in the below code needs to be updated 
    */
   static getRun({ data, success, error }) {
-    return $.ajax(Utils.getAjaxUrl('ajax-api/2.0/preview/mlflow/runs/get'), {
+    return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query?query={runid="${data.run_uuid}"}`, {
       type: 'GET',
       dataType: 'json',
       converters: {
         'text json': StrictJsonBigInt.parse,
       },
-      data: data,
       jsonp: false,
-      success: success,
+      success: function (response) {
+        const { result } = response.data;
+        let metrics = [];
+        let temp = {};
+        result.forEach(function (res) {
+          if (res.metric.__name__ !== 'step') {
+            if (temp[res.metric.__name__]) {
+              if (parseInt(res.metric.step, 10) > parseInt(temp[res.metric.__name__].step, 10)) {
+                temp[res.metric.__name__] = { timestamp: res.metric.timestamp, step: res.metric.step, value: parseFloat(res.value[1]), key: res.metric.__name__ };
+              }
+            } else {
+              temp[res.metric.__name__] = { timestamp: res.metric.timestamp, step: res.metric.step, value: parseFloat(res.value[1]), key: res.metric.__name__ };
+            }
+          }
+        });
+        Object.keys(temp).forEach(t => metrics.push(temp[t]));
+        const runInfo = {
+            run_uuid: data.run_uuid,
+            run_id: data.run_uuid,
+            ...(result.length  ?  { run_name: result[0].metric.run_name } : {} )
+
+          };
+        response.run = {
+          info: runInfo,
+          data: {
+            metrics,
+            params: [],
+            tags: [...(runInfo.run_name ? [{ value: runInfo.run_name, key: "mlflow.runName" }] : [] )]
+          }
+        };
+        delete response.data;
+        success(response);
+      },
       error: error,
     });
   }
@@ -300,15 +333,23 @@ export class MlflowService {
    * @return {Promise}
    */
   static getMetricHistory({ data, success, error }) {
-    return $.ajax(Utils.getAjaxUrl('ajax-api/2.0/preview/mlflow/metrics/get-history'), {
+    return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query?query=${data.metric_key}{runid="${data.run_uuid}"}`, {
       type: 'GET',
       dataType: 'json',
       converters: {
         'text json': StrictJsonBigInt.parse,
       },
-      data: data,
       jsonp: false,
-      success: success,
+      success: function (response) {
+        const { result } = response.data;
+        if (result && result.length > 0) {
+          response.metrics = result.map(res => {
+            return { timestamp: res.value[0], step: res.metric.step, value: parseFloat(res.value[1]), key: data.metric_key };
+          });
+        }
+        delete response.data;
+        success(response);
+      },
       error: error,
     });
   }

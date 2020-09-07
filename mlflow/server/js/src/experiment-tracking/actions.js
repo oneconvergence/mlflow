@@ -16,7 +16,7 @@ export const GET_EXPERIMENT_API = 'GET_EXPERIMENT_API';
 export const getExperimentApi = (experimentId, id = getUUID()) => {
   return {
     type: GET_EXPERIMENT_API,
-    payload: wrapDeferred(MlflowService.getExperiment, { experiment_id: experimentId }),
+    payload: Promise.resolve({experiment: {experiment_id: experimentId}}),
     meta: { id: id },
   };
 };
