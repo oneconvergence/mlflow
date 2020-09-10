@@ -10,6 +10,7 @@
 import $ from 'jquery';
 import JsonBigInt from 'json-bigint';
 import Utils from '../../common/utils/Utils';
+import moment from 'moment';
 
 const StrictJsonBigInt = JsonBigInt({ strict: true, storeAsString: true });
 
@@ -95,17 +96,7 @@ export class MlflowService {
    * @return {Promise}
    */
   static getExperiment({ data, success, error }) {
-    return $.ajax(Utils.getAjaxUrl('ajax-api/2.0/preview/mlflow/experiments/get'), {
-      type: 'GET',
-      dataType: 'json',
-      converters: {
-        'text json': StrictJsonBigInt.parse,
-      },
-      data: data,
-      jsonp: false,
-      success: success,
-      error: error,
-    });
+    success({ experiment: { experiment_id: 0 } });
   }
 
   /**
@@ -244,45 +235,62 @@ export class MlflowService {
    * params in the below code needs to be updated 
    */
   static getRun({ data, success, error }) {
-    return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query?query={runid="${data.run_uuid}"}`, {
+    return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/controller/jobs/uuid/${data.run_uuid}`, {
       type: 'GET',
       dataType: 'json',
-      converters: {
-        'text json': StrictJsonBigInt.parse,
+      headers: {
+        Authorization: localStorage.getItem('token')
+          ? 'Bearer ' + localStorage.getItem('token')
+          : ''
       },
       jsonp: false,
       success: function (response) {
-        const { result } = response.data;
-        let metrics = [];
-        let temp = {};
-        result.forEach(function (res) {
-          if (res.metric.__name__ !== 'step') {
-            if (temp[res.metric.__name__]) {
-              if (parseInt(res.metric.step, 10) > parseInt(temp[res.metric.__name__].step, 10)) {
-                temp[res.metric.__name__] = { timestamp: res.metric.timestamp, step: res.metric.step, value: parseFloat(res.value[1]), key: res.metric.__name__ };
+        var start = response.data['parameters']['generated']['timestamps']['start']
+        var end = response.data['parameters']['generated']['timestamps']['end']
+        let startTime = moment.utc(start).valueOf() / 1000
+        let endTime = moment.utc(end).valueOf() / 1000
+        return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query_range?query={runid="${data.run_uuid}"}&start=${startTime}&end=${endTime}&step=5`, {
+          type: 'GET',
+          dataType: 'json',
+          converters: {
+            'text json': StrictJsonBigInt.parse,
+          },
+          jsonp: false,
+          success: function (response) {
+            const { result } = response.data;
+            let metrics = [];
+            let temp = {};
+            result.forEach(function (res) {
+              if (res.metric.__name__ !== 'step') {
+                if (temp[res.metric.__name__]) {
+                  if (parseInt(res.metric.step, 10) > parseInt(temp[res.metric.__name__].step, 10)) {
+                    temp[res.metric.__name__] = { timestamp: res.metric.timestamp, step: res.metric.step, value: parseFloat(res.values[0][1]), key: res.metric.__name__ };
+                  }
+                } else {
+                  temp[res.metric.__name__] = { timestamp: res.metric.timestamp, step: res.metric.step, value: parseFloat(res.values[0][1]), key: res.metric.__name__ };
+                }
               }
-            } else {
-              temp[res.metric.__name__] = { timestamp: res.metric.timestamp, step: res.metric.step, value: parseFloat(res.value[1]), key: res.metric.__name__ };
-            }
-          }
-        });
-        Object.keys(temp).forEach(t => metrics.push(temp[t]));
-        const runInfo = {
-            run_uuid: data.run_uuid,
-            run_id: data.run_uuid,
-            ...(result.length  ?  { run_name: result[0].metric.run_name } : {} )
+            });
+            Object.keys(temp).forEach(t => metrics.push(temp[t]));
+            const runInfo = {
+              run_uuid: data.run_uuid,
+              run_id: data.run_uuid,
+              ...(result.length ? { run_name: result[0].metric.run_name } : {})
 
-          };
-        response.run = {
-          info: runInfo,
-          data: {
-            metrics,
-            params: [],
-            tags: [...(runInfo.run_name ? [{ value: runInfo.run_name, key: "mlflow.runName" }] : [] )]
-          }
-        };
-        delete response.data;
-        success(response);
+            };
+            response.run = {
+              info: runInfo,
+              data: {
+                metrics,
+                params: [],
+                tags: [...(runInfo.run_name ? [{ value: runInfo.run_name, key: "mlflow.runName" }] : [])]
+              }
+            };
+            delete response.data;
+            success(response);
+          },
+          error: error,
+        });
       },
       error: error,
     });
@@ -333,22 +341,39 @@ export class MlflowService {
    * @return {Promise}
    */
   static getMetricHistory({ data, success, error }) {
-    return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query?query=${data.metric_key}{runid="${data.run_uuid}"}`, {
+    return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/controller/jobs/uuid/${data.run_uuid}`, {
       type: 'GET',
       dataType: 'json',
-      converters: {
-        'text json': StrictJsonBigInt.parse,
+      headers: {
+        Authorization: localStorage.getItem('token')
+          ? 'Bearer ' + localStorage.getItem('token')
+          : ''
       },
       jsonp: false,
       success: function (response) {
-        const { result } = response.data;
-        if (result && result.length > 0) {
-          response.metrics = result.map(res => {
-            return { timestamp: res.value[0], step: res.metric.step, value: parseFloat(res.value[1]), key: data.metric_key };
-          });
-        }
-        delete response.data;
-        success(response);
+        var start = response.data['parameters']['generated']['timestamps']['start']
+        var end = response.data['parameters']['generated']['timestamps']['end']
+        let startTime = moment.utc(start).valueOf() / 1000
+        let endTime = moment.utc(end).valueOf() / 1000
+        return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query_range?query=${data.metric_key}{runid="${data.run_uuid}"}&start=${startTime}&end=${endTime}&step=5`, {
+          type: 'GET',
+          dataType: 'json',
+          converters: {
+            'text json': StrictJsonBigInt.parse,
+          },
+          jsonp: false,
+          success: function (response) {
+            const { result } = response.data;
+            if (result && result.length > 0) {
+              response.metrics = result.map(res => {
+                return { timestamp: res.metric.timestamp, step: res.metric.step, value: parseFloat(res.values[0][1]), key: data.metric_key };
+              });
+            }
+            delete response.data;
+            success(response);
+          },
+          error: error,
+        });
       },
       error: error,
     });
