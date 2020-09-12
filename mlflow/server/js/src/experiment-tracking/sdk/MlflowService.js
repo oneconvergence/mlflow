@@ -15,6 +15,8 @@ import moment from 'moment';
 const StrictJsonBigInt = JsonBigInt({ strict: true, storeAsString: true });
 
 export class MlflowService {
+
+  static runInfos = {};
   /**
    * @param {CreateExperiment} data: Immutable Record
    * @param {function} success
@@ -226,6 +228,52 @@ export class MlflowService {
     });
   }
 
+  static getMetricsByUuid(data, error, success) {
+    console.log("GMS : ", data)
+    return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query_range?query={runid="${data.run_uuid}"}&start=${data.start_time}&end=${data.end_time}&step=5`, {
+      type: 'GET',
+      dataType: 'json',
+      converters: {
+        'text json': StrictJsonBigInt.parse,
+      },
+      jsonp: false,
+      success: function (response) {
+        const { result } = response.data;
+        let metrics = [];
+        let temp = {};
+        result.forEach(function (res) {
+          if (res.metric.__name__ !== 'step') {
+            if (temp[res.metric.__name__]) {
+              if (parseInt(res.metric.step, 10) > parseInt(temp[res.metric.__name__].step, 10)) {
+                temp[res.metric.__name__] = { timestamp: res.metric.timestamp, step: res.metric.step, value: parseFloat(res.values[0][1]), key: res.metric.__name__ };
+              }
+            } else {
+              temp[res.metric.__name__] = { timestamp: res.metric.timestamp, step: res.metric.step, value: parseFloat(res.values[0][1]), key: res.metric.__name__ };
+            }
+          }
+        });
+        Object.keys(temp).forEach(t => metrics.push(temp[t]));
+        const runInfo = {
+          run_uuid: data.run_uuid,
+          run_id: data.run_uuid,
+          ...(result.length ? { run_name: result[0].metric.run_name } : {})
+
+        };
+        response.run = {
+          info: runInfo,
+          data: {
+            metrics,
+            params: [],
+            tags: [...(runInfo.run_name ? [{ value: runInfo.run_name, key: "mlflow.runName" }] : [])]
+          }
+        };
+        delete response.data;
+        success(response);
+      },
+      error: error,
+    });
+  }
+
   /**
    * @param {GetRun} data: Immutable Record
    * @param {function} success
@@ -235,65 +283,40 @@ export class MlflowService {
    * params in the below code needs to be updated 
    */
   static getRun({ data, success, error }) {
-    return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/controller/jobs/uuid/${data.run_uuid}`, {
-      type: 'GET',
-      dataType: 'json',
-      headers: {
-        Authorization: localStorage.getItem('token')
-          ? 'Bearer ' + localStorage.getItem('token')
-          : ''
-      },
-      jsonp: false,
-      success: function (response) {
-        var start = response.data['parameters']['generated']['timestamps']['start']
-        var end = response.data['parameters']['generated']['timestamps']['end']
-        let startTime = moment.utc(start).valueOf() / 1000
-        let endTime = moment.utc(end).valueOf() / 1000
-        return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query_range?query={runid="${data.run_uuid}"}&start=${startTime}&end=${endTime}&step=5`, {
-          type: 'GET',
-          dataType: 'json',
-          converters: {
-            'text json': StrictJsonBigInt.parse,
-          },
-          jsonp: false,
-          success: function (response) {
-            const { result } = response.data;
-            let metrics = [];
-            let temp = {};
-            result.forEach(function (res) {
-              if (res.metric.__name__ !== 'step') {
-                if (temp[res.metric.__name__]) {
-                  if (parseInt(res.metric.step, 10) > parseInt(temp[res.metric.__name__].step, 10)) {
-                    temp[res.metric.__name__] = { timestamp: res.metric.timestamp, step: res.metric.step, value: parseFloat(res.values[0][1]), key: res.metric.__name__ };
-                  }
-                } else {
-                  temp[res.metric.__name__] = { timestamp: res.metric.timestamp, step: res.metric.step, value: parseFloat(res.values[0][1]), key: res.metric.__name__ };
-                }
-              }
-            });
-            Object.keys(temp).forEach(t => metrics.push(temp[t]));
-            const runInfo = {
-              run_uuid: data.run_uuid,
-              run_id: data.run_uuid,
-              ...(result.length ? { run_name: result[0].metric.run_name } : {})
-
-            };
-            response.run = {
-              info: runInfo,
-              data: {
-                metrics,
-                params: [],
-                tags: [...(runInfo.run_name ? [{ value: runInfo.run_name, key: "mlflow.runName" }] : [])]
-              }
-            };
-            delete response.data;
+    console.log("mlservice: ", MlflowService.runInfos)
+    if (MlflowService.runInfos[data.run_uuid]) {
+      console.log("mlservice: ", MlflowService.runInfos)
+      MlflowService.getMetricsByUuid(MlflowService.runInfos[data.run_uuid], error, function (response) {
+        success(response);
+      });
+    }
+    else {
+      return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/controller/jobs/uuid/${data.run_uuid}`, {
+        type: 'GET',
+        dataType: 'json',
+        headers: {
+          Authorization: localStorage.getItem('token')
+            ? 'Bearer ' + localStorage.getItem('token')
+            : ''
+        },
+        jsonp: false,
+        success: function (response) {
+          const start = response.data['parameters']['generated']['timestamps']['start']
+          const end = response.data['parameters']['generated']['timestamps']['end']
+          const runInfo = {
+            run_id: data.run_uuid,
+            start_time: moment.utc(start).valueOf() / 1000,
+            run_uuid: data.run_uuid,
+            end_time: moment.utc(end).valueOf() / 1000,
+            experimentId: 0
+          };
+          MlflowService.getMetricsByUuid(runInfo, error, function (response) {
             success(response);
-          },
-          error: error,
-        });
-      },
-      error: error,
-    });
+          });
+        },
+        error: error,
+      });
+    }
   }
 
   /**
@@ -334,6 +357,28 @@ export class MlflowService {
     });
   }
 
+  static getMetricByUuid(data, error, success) {
+    return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query_range?query=${data.metric_key}{runid="${data.run_uuid}"}&start=${data.start_time}&end=${data.end_time}&step=5`, {
+      type: 'GET',
+      dataType: 'json',
+      converters: {
+        'text json': StrictJsonBigInt.parse,
+      },
+      jsonp: false,
+      success: function (response) {
+        const { result } = response.data;
+        if (result && result.length > 0) {
+          response.metrics = result.map(res => {
+            return { timestamp: res.metric.timestamp, step: res.metric.step, value: parseFloat(res.values[0][1]), key: data.metric_key };
+          });
+        }
+        delete response.data;
+        success(response);
+      },
+      error: error,
+    });
+  }
+
   /**
    * @param {GetMetricHistory} data: Immutable Record
    * @param {function} success
@@ -341,42 +386,40 @@ export class MlflowService {
    * @return {Promise}
    */
   static getMetricHistory({ data, success, error }) {
-    return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/controller/jobs/uuid/${data.run_uuid}`, {
-      type: 'GET',
-      dataType: 'json',
-      headers: {
-        Authorization: localStorage.getItem('token')
-          ? 'Bearer ' + localStorage.getItem('token')
-          : ''
-      },
-      jsonp: false,
-      success: function (response) {
-        var start = response.data['parameters']['generated']['timestamps']['start']
-        var end = response.data['parameters']['generated']['timestamps']['end']
-        let startTime = moment.utc(start).valueOf() / 1000
-        let endTime = moment.utc(end).valueOf() / 1000
-        return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query_range?query=${data.metric_key}{runid="${data.run_uuid}"}&start=${startTime}&end=${endTime}&step=5`, {
-          type: 'GET',
-          dataType: 'json',
-          converters: {
-            'text json': StrictJsonBigInt.parse,
-          },
-          jsonp: false,
-          success: function (response) {
-            const { result } = response.data;
-            if (result && result.length > 0) {
-              response.metrics = result.map(res => {
-                return { timestamp: res.metric.timestamp, step: res.metric.step, value: parseFloat(res.values[0][1]), key: data.metric_key };
-              });
-            }
-            delete response.data;
+    if (MlflowService.runInfos[data.run_uuid]) {
+      const runInfo = { metric_key: data.metric_key, ...MlflowService.runInfos[data.run_uuid] };
+      MlflowService.getMetricByUuid(runInfo, error, function (response) {
+        success(response);
+      });
+    }
+    else {
+      return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/controller/jobs/uuid/${data.run_uuid}`, {
+        type: 'GET',
+        dataType: 'json',
+        headers: {
+          Authorization: localStorage.getItem('token')
+            ? 'Bearer ' + localStorage.getItem('token')
+            : ''
+        },
+        jsonp: false,
+        success: function (response) {
+          const start = response.data['parameters']['generated']['timestamps']['start']
+          const end = response.data['parameters']['generated']['timestamps']['end']
+          const runInfo = {
+            metric_key: data.metric_key,
+            run_id: data.run_uuid,
+            start_time: moment.utc(start).valueOf() / 1000,
+            run_uuid: data.run_uuid,
+            end_time: moment.utc(end).valueOf() / 1000,
+            experimentId: 0
+          };
+          MlflowService.getMetricByUuid(runInfo, error, function (response) {
             success(response);
-          },
-          error: error,
-        });
-      },
-      error: error,
-    });
+          });
+        },
+        error: error,
+      });
+    }
   }
 
   /**
