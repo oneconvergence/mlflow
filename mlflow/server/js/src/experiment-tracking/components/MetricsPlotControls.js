@@ -98,7 +98,6 @@ export class MetricsPlotControls extends React.Component {
           <TreeSelect
             className='metrics-select'
             searchPlaceholder='Please select metric'
-            value={this.props.selectedMetricKeys}
             showCheckedStrategy={TreeSelect.SHOW_PARENT}
             treeCheckable
             treeData={this.getAllMetricKeys()}
