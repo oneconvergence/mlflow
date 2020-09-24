@@ -229,7 +229,6 @@ export class MlflowService {
   }
 
   static getMetricsByUuid(data, error, success) {
-    console.log("GMS : ", data)
     return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query_range?query={runid="${data.run_uuid}"}&start=${data.start_time}&end=${data.end_time}&step=5`, {
       type: 'GET',
       dataType: 'json',
@@ -283,9 +282,7 @@ export class MlflowService {
    * params in the below code needs to be updated 
    */
   static getRun({ data, success, error }) {
-    console.log("mlservice: ", MlflowService.runInfos)
     if (MlflowService.runInfos[data.run_uuid]) {
-      console.log("mlservice: ", MlflowService.runInfos)
       MlflowService.getMetricsByUuid(MlflowService.runInfos[data.run_uuid], error, function (response) {
         success(response);
       });
