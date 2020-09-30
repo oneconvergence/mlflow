@@ -255,6 +255,8 @@ export class MlflowService {
         const runInfo = {
           run_uuid: data.run_uuid,
           run_id: data.run_uuid,
+          start_time: data.start_time * 1000,
+          end_time: data.end_time * 1000,
           ...(result.length ? { run_name: result[0].metric.run_name } : {})
 
         };
