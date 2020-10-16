@@ -3,6 +3,7 @@ import './RequestStateWrapper.css';
 import { connect } from 'react-redux';
 import { getApis } from '../../experiment-tracking/reducers/Reducers';
 import PropTypes from 'prop-types';
+import Loading from '../../../../../../../components/common/loading'
 import { Spinner } from './Spinner';
 
 export class RequestStateWrapper extends Component {
@@ -61,7 +62,7 @@ export class RequestStateWrapper extends Component {
       }
       return children;
     }
-    return <Spinner />;
+    return <Loading />;
   }
 }
 
