@@ -257,10 +257,6 @@ export class MetricsPlotPanel extends React.Component {
     const axisType = axisEnumToPlotlyType[e.target.value] || 'linear';
     const newLayout = {
       ...state.layout,
-      xaxis: {
-        autorange: true,
-        type: axisType,
-      },
     };
     this.updateUrlState({ selectedXAxis: e.target.value, layout: newLayout });
   };
