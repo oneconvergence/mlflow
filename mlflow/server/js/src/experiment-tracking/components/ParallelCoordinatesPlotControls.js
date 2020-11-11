@@ -28,7 +28,7 @@ export class ParallelCoordinatesPlotControls extends React.Component {
     } = this.props;
     return (
       <div className='plot-controls'>
-        <div>Parameters:</div>
+        {/*<div>Parameters:</div>
         <TreeSelect
           className='metrics-select'
           searchPlaceholder='Please select parameters'
@@ -38,7 +38,7 @@ export class ParallelCoordinatesPlotControls extends React.Component {
           treeData={paramKeys.map((k) => ({ title: k, value: k, label: k }))}
           onChange={handleParamsSelectChange}
           filterTreeNode={ParallelCoordinatesPlotControls.handleFilterChange}
-        />
+        />*/}
         <div style={{ marginTop: 20 }}>Metrics:</div>
         <TreeSelect
           className='metrics-select'
