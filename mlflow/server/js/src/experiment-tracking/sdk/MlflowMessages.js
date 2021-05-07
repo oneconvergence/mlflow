@@ -115,6 +115,9 @@ export const RunInfo = Immutable.Record({
   run_uuid: undefined,
 
   // optional STRING
+  workspace: undefined,
+
+  // optional STRING
   experiment_id: undefined,
 
   // optional STRING
@@ -155,6 +158,9 @@ const extended_RunInfo = ModelBuilder.extend(RunInfo, {
   },
   getExperimentId() {
     return this.experiment_id !== undefined ? this.experiment_id : '0';
+  },
+  getWorkspace() {
+    return this.workspace !== undefined ? this.workspace : '';
   },
   getStatus() {
     return this.status !== undefined ? this.status : 'RUNNING';
