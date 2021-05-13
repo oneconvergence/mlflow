@@ -118,6 +118,18 @@ export const RunInfo = Immutable.Record({
   workspace: undefined,
 
   // optional STRING
+  ws_link: undefined,
+
+  // optional STRING
+  input_datasets: undefined,
+
+  // optional STRING
+  input_models: undefined,
+
+  // optional STRING
+  outputs: undefined,
+
+  // optional STRING
   experiment_id: undefined,
 
   // optional STRING
