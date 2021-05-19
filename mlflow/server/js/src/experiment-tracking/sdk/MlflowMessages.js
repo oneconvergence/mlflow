@@ -130,6 +130,15 @@ export const RunInfo = Immutable.Record({
   outputs: undefined,
 
   // optional STRING
+  epochs: undefined,
+
+  // optional STRING
+  batch_size: undefined,
+
+  // optional STRING
+  learning_rate: undefined,
+
+  // optional STRING
   experiment_id: undefined,
 
   // optional STRING
