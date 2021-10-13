@@ -11,6 +11,7 @@ import $ from 'jquery';
 import JsonBigInt from 'json-bigint';
 import Utils from '../../common/utils/Utils';
 import moment from 'moment';
+import yaml from 'js-yaml'
 
 const StrictJsonBigInt = JsonBigInt({ strict: true, storeAsString: true });
 
@@ -232,6 +233,9 @@ export class MlflowService {
     return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query_range?query={runid="${data.run_uuid}"}&start=${data.start_time}&end=${data.end_time}&step=5`, {
       type: 'GET',
       dataType: 'json',
+      headers : {authorization: localStorage.getItem('token')
+        ? 'Bearer ' + localStorage.getItem('token')
+        : ''},
       converters: {
         'text json': StrictJsonBigInt.parse,
       },
@@ -255,6 +259,14 @@ export class MlflowService {
         const runInfo = {
           run_uuid: data.run_uuid,
           run_id: data.run_uuid,
+          workspace: data.workspace,
+          ws_link: data.ws_link,
+          input_datasets: data.input_datasets && data.input_datasets.length ? data.input_datasets : [],
+          input_models: data.input_models && data.input_models.length ? data.input_models : [],
+          outputs: data.outputs && data.outputs.length ? data.outputs : [],
+          epochs: data.epochs,
+          batch_size: data.batch_size,
+          learning_rate: data.learning_rate,
           start_time: data.start_time * 1000,
           end_time: data.end_time * 1000,
           ...(result.length ? { run_name: result[0].metric.run_name } : {})
@@ -302,12 +314,73 @@ export class MlflowService {
         success: function (response) {
           const start = response.data['parameters']['generated']['timestamps']['start']
           const end = response.data['parameters']['generated']['timestamps']['end']
+          const training = response && response.data && response.data.parameters && response.data.parameters.training
+          const hyperparams = training && training.hyperparams && training.hyperparams.file.body
+            && training.hyperparams.file.name
+            ? training.hyperparams.file.name.split('.')[1] === 'json'
+              ? JSON.parse(training.hyperparams.file.body).parameters
+              : training.hyperparams.file.name.split('.')[1] === 'yaml'
+                ? yaml.load(training.hyperparams.file.body).parameters
+                : null
+            : null
+          const datums = training && training.datums
+          const datasets = datums && datums.datasets && datums.datasets.map((dataset) => dataset.name + ':' + dataset.version_name + '$' +
+            '/ds/repos/datasets/' +
+            'user/' +
+            (dataset.name.split(':')[0]) +
+            '/' +
+            (dataset.name.split(':')[1]) +
+            (dataset.version
+              ? '/version/' + dataset.version + '?tab=details'
+              : ''))
+          const models = datums && datums.models && datums.models.map((model) => model.name + ':' + model.version_name + '$' +
+            '/ds/repos/models/' +
+            'user/' +
+            (model.name.split(':')[0]) +
+            '/' +
+            (model.name.split(':')[1]) +
+            (model.version
+              ? '/version/' + model.version + '?tab=details'
+              : ''))
+          const outputs = datums && datums.outputs && datums.outputs.map((output) => output.name + ':' + output.version_name + '$' +
+            '/ds/repos/models/' +
+            'user/' +
+            (output.name.split(':')[0]) +
+            '/' +
+            (output.name.split(':')[1]) +
+            (output.version
+              ? '/version/' + output.version + '?tab=details'
+              : ''))
+          const workspace = datums && datums.workspace && datums.workspace.data && datums.workspace.data.name ? datums.workspace.data.name : 'NA'
+          const workspace_version = datums && datums.workspace && datums.workspace.data && datums.workspace.data.version ? datums.workspace.data.version : 'NA'
+          const ws_link = '/ds/repos/code/' +
+            'user/' +
+            (workspace.split(':')[0]) +
+            '/' +
+            (workspace.split(':')[1]) +
+            (workspace_version
+              ? '/version/' + workspace_version + '?tab=details'
+              : '')
+          const param_epochs = hyperparams && hyperparams.find(param => param.name === '--epochs')
+          const epochs = param_epochs ? param_epochs.feasibleSpace.min + ':' + param_epochs.feasibleSpace.max : 'NA'
+          const param_batch_size = hyperparams && hyperparams.find(param => param.name === '--batch_size')
+          const batch_size = param_batch_size ? param_batch_size.feasibleSpace.min + ':' + param_batch_size.feasibleSpace.max : 'NA'
+          const param_learning_rate = hyperparams && hyperparams.find(param => param.name === '--learning_rate')
+          const learning_rate = param_learning_rate ? param_learning_rate.feasibleSpace.min + ':' + param_learning_rate.feasibleSpace.max : 'NA'
           const runInfo = {
             run_id: data.run_uuid,
             start_time: moment.utc(start).valueOf() / 1000,
             run_uuid: data.run_uuid,
             end_time: moment.utc(end).valueOf() / 1000,
-            experimentId: 0
+            experimentId: 0,
+            workspace: workspace,
+            ws_link: ws_link,
+            input_datasets: datasets,
+            input_models: models,
+            outputs: outputs,
+            epochs: epochs,
+            batch_size: batch_size,
+            learning_rate: learning_rate
           };
           MlflowService.getMetricsByUuid(runInfo, error, function (response) {
             success(response);
@@ -360,6 +433,9 @@ export class MlflowService {
     return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query_range?query=${data.metric_key}{runid="${data.run_uuid}"}&start=${data.start_time}&end=${data.end_time}&step=5`, {
       type: 'GET',
       dataType: 'json',
+      headers: {authorization: localStorage.getItem('token')
+        ? 'Bearer ' + localStorage.getItem('token')
+        : ''},
       converters: {
         'text json': StrictJsonBigInt.parse,
       },
@@ -404,13 +480,74 @@ export class MlflowService {
         success: function (response) {
           const start = response.data['parameters']['generated']['timestamps']['start']
           const end = response.data['parameters']['generated']['timestamps']['end']
+          const training = response && response.data && response.data.parameters && response.data.parameters.training
+          const hyperparams = training && training.hyperparams && training.hyperparams.file.body
+            && training.hyperparams.file.name
+            ? training.hyperparams.file.name.split('.')[1] === 'json'
+              ? JSON.parse(training.hyperparams.file.body).parameters
+              : training.hyperparams.file.name.split('.')[1] === 'yaml'
+                ? yaml.load(training.hyperparams.file.body).parameters
+                : null
+            : null
+          const datums = training && training.datums
+          const datasets = datums && datums.datasets && datums.datasets.map((dataset) => dataset.name + ':' + dataset.version_name + '$' +
+            '/ds/repos/datasets/' +
+            'user/' +
+            (dataset.name.split(':')[0]) +
+            '/' +
+            (dataset.name.split(':')[1]) +
+            (dataset.version
+              ? '/version/' + dataset.version + '?tab=details'
+              : ''))
+          const models = datums && datums.models && datums.models.map((model) => model.name + ':' + model.version_name + '$' +
+            '/ds/repos/models/' +
+            'user/' +
+            (model.name.split(':')[0]) +
+            '/' +
+            (model.name.split(':')[1]) +
+            (model.version
+              ? '/version/' + model.version + '?tab=details'
+              : ''))
+          const outputs = datums && datums.outputs && datums.outputs.map((output) => output.name + ':' + output.version_name + '$' +
+            '/ds/repos/models/' +
+            'user/' +
+            (output.name.split(':')[0]) +
+            '/' +
+            (output.name.split(':')[1]) +
+            (output.version
+              ? '/version/' + output.version + '?tab=details'
+              : ''))
+          const workspace = datums && datums.workspace && datums.workspace.data && datums.workspace.data.name ? datums.workspace.data.name : 'NA'
+          const workspace_version = datums && datums.workspace && datums.workspace.data && datums.workspace.data.version ? datums.workspace.data.version : 'NA'
+          const ws_link = '/ds/repos/code/' +
+            'user/' +
+            (workspace.split(':')[0]) +
+            '/' +
+            (workspace.split(':')[1]) +
+            (workspace_version
+              ? '/version/' + workspace_version + '?tab=details'
+              : '')
+          const param_epochs = hyperparams && hyperparams.find(param => param.name === '--epochs')
+          const epochs = param_epochs ? param_epochs.feasibleSpace.min + ':' + param_epochs.feasibleSpace.max : 'NA'
+          const param_batch_size = hyperparams && hyperparams.find(param => param.name === '--batch_size')
+          const batch_size = param_batch_size ? param_batch_size.feasibleSpace.min + ':' + param_batch_size.feasibleSpace.max : 'NA'
+          const param_learning_rate = hyperparams && hyperparams.find(param => param.name === '--learning_rate')
+          const learning_rate = param_learning_rate ? param_learning_rate.feasibleSpace.min + ':' + param_learning_rate.feasibleSpace.max : 'NA'
           const runInfo = {
             metric_key: data.metric_key,
             run_id: data.run_uuid,
             start_time: moment.utc(start).valueOf() / 1000,
             run_uuid: data.run_uuid,
             end_time: moment.utc(end).valueOf() / 1000,
-            experimentId: 0
+            experimentId: 0,
+            workspace: workspace,
+            ws_link: ws_link,
+            input_datasets: datasets,
+            input_models: models,
+            outputs: outputs,
+            epochs: epochs,
+            batch_size: batch_size,
+            learning_rate: learning_rate
           };
           MlflowService.getMetricByUuid(runInfo, error, function (response) {
             success(response);

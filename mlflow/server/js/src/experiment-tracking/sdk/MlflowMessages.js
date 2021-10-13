@@ -115,6 +115,30 @@ export const RunInfo = Immutable.Record({
   run_uuid: undefined,
 
   // optional STRING
+  workspace: undefined,
+
+  // optional STRING
+  ws_link: undefined,
+
+  // optional STRING
+  input_datasets: undefined,
+
+  // optional STRING
+  input_models: undefined,
+
+  // optional STRING
+  outputs: undefined,
+
+  // optional STRING
+  epochs: undefined,
+
+  // optional STRING
+  batch_size: undefined,
+
+  // optional STRING
+  learning_rate: undefined,
+
+  // optional STRING
   experiment_id: undefined,
 
   // optional STRING
@@ -155,6 +179,9 @@ const extended_RunInfo = ModelBuilder.extend(RunInfo, {
   },
   getExperimentId() {
     return this.experiment_id !== undefined ? this.experiment_id : '0';
+  },
+  getWorkspace() {
+    return this.workspace !== undefined ? this.workspace : '';
   },
   getStatus() {
     return this.status !== undefined ? this.status : 'RUNNING';
