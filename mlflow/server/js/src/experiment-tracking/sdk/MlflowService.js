@@ -306,7 +306,7 @@ export class MlflowService {
             run_id: data.run_uuid,
             start_time: moment.utc(start).valueOf() / 1000,
             run_uuid: data.run_uuid,
-            end_time: moment.utc(end).valueOf() / 1000,
+            end_time: (moment.utc(end).valueOf() / 1000) + 60,
             experimentId: 0
           };
           MlflowService.getMetricsByUuid(runInfo, error, function (response) {
@@ -409,7 +409,7 @@ export class MlflowService {
             run_id: data.run_uuid,
             start_time: moment.utc(start).valueOf() / 1000,
             run_uuid: data.run_uuid,
-            end_time: moment.utc(end).valueOf() / 1000,
+            end_time: (moment.utc(end).valueOf() / 1000) + 60,
             experimentId: 0
           };
           MlflowService.getMetricByUuid(runInfo, error, function (response) {
