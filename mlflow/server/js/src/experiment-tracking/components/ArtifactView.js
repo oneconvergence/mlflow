@@ -103,7 +103,8 @@ export class ArtifactViewImpl extends Component {
       // React searches for existing model versions under the path of the file, which won't exist.
       toRender = this.renderModelVersionInfoSection(existingModelVersions);
     } else if (this.activeNodeCanBeRegistered() && Utils.isModelRegistryEnabled()) {
-      toRender = this.renderRegisterModelButton();
+      // toRender = this.renderRegisterModelButton();
+      toRender = null;
     } else if (this.activeNodeIsDirectory()) {
       toRender = null;
     } else {
