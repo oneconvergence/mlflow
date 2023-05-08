@@ -67,7 +67,7 @@ export const GET_RUN_API = 'GET_RUN_API';
 export const getRunApi = (runUuid, id = getUUID()) => {
   return {
     type: GET_RUN_API,
-    payload: wrapDeferred(MlflowService.getRun, { run_uuid: runUuid }),
+    payload: wrapDeferred(MlflowService.getRun, { run_id: runUuid }),
     meta: { id: id },
   };
 };
@@ -148,7 +148,7 @@ export const getMetricHistoryApi = (runUuid, metricKey, id = getUUID()) => {
   return {
     type: GET_METRIC_HISTORY_API,
     payload: wrapDeferred(MlflowService.getMetricHistory, {
-      run_uuid: runUuid,
+      run_id: runUuid,
       metric_key: decodeURIComponent(metricKey),
     }),
     meta: { id: id, runUuid: runUuid, key: metricKey },

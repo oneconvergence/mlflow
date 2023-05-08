@@ -98,8 +98,19 @@ export class MlflowService {
    * @param {function} error
    * @return {Promise}
    */
+
   static getExperiment({ data, success, error }) {
-    success({ experiment: { experiment_id: 0 } });
+    return $.ajax(Utils.getAjaxUrl('ajax-api/2.0/mlflow/experiments/get'), {
+      type: 'GET',
+      dataType: 'json',
+      converters: {
+        'text json': StrictJsonBigInt.parse,
+      },
+      data: data,
+      jsonp: false,
+      success: success,
+      error: error,
+    });
   }
 
   /**
@@ -292,104 +303,22 @@ export class MlflowService {
    * @param {function} success
    * @param {function} error
    * @return {Promise}
-   * Please note that the params are empty here. Once we're able to fetch it,
-   * params in the below code needs to be updated 
    */
+  
   static getRun({ data, success, error }) {
-    if (MlflowService.runInfos[data.run_uuid]) {
-      MlflowService.getMetricsByUuid(MlflowService.runInfos[data.run_uuid], error, function (response) {
-        success(response);
-      });
-    }
-    else {
-      return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/controller/jobs/uuid/${data.run_uuid}`, {
-        type: 'GET',
-        dataType: 'json',
-        headers: {
-          Authorization: localStorage.getItem('token')
-            ? 'Bearer ' + localStorage.getItem('token')
-            : ''
-        },
-        jsonp: false,
-        success: function (response) {
-          const start = response.data['parameters']['generated']['timestamps']['start']
-          const end = response.data['parameters']['generated']['timestamps']['end']
-          const training = response && response.data && response.data.parameters && response.data.parameters.training
-          const hyperparams = training && training.hyperparams && training.hyperparams.file.body
-            && training.hyperparams.file.name
-            ? training.hyperparams.file.name.split('.')[1] === 'json'
-              ? JSON.parse(training.hyperparams.file.body).parameters
-              : training.hyperparams.file.name.split('.')[1] === 'yaml'
-                ? yaml.load(training.hyperparams.file.body).parameters
-                : null
-            : null
-          const datums = training && training.datums
-          const datasets = datums && datums.datasets && datums.datasets.map((dataset) => dataset.name + ':' + dataset.version_name + '$' +
-            '/ds/repos/datasets/' +
-            'user/' +
-            (dataset.name.split(':')[0]) +
-            '/' +
-            (dataset.name.split(':')[1]) +
-            (dataset.version
-              ? '/version/' + dataset.version + '?tab=details'
-              : ''))
-          const models = datums && datums.models && datums.models.map((model) => model.name + ':' + model.version_name + '$' +
-            '/ds/repos/models/' +
-            'user/' +
-            (model.name.split(':')[0]) +
-            '/' +
-            (model.name.split(':')[1]) +
-            (model.version
-              ? '/version/' + model.version + '?tab=details'
-              : ''))
-          const outputs = datums && datums.outputs && datums.outputs.map((output) => output.name + ':' + output.version_name + '$' +
-            '/ds/repos/models/' +
-            'user/' +
-            (output.name.split(':')[0]) +
-            '/' +
-            (output.name.split(':')[1]) +
-            (output.version
-              ? '/version/' + output.version + '?tab=details'
-              : ''))
-          const workspace = datums && datums.workspace && datums.workspace.data && datums.workspace.data.name ? datums.workspace.data.name : 'NA'
-          const workspace_version = datums && datums.workspace && datums.workspace.data && datums.workspace.data.version ? datums.workspace.data.version : 'NA'
-          const ws_link = '/ds/repos/code/' +
-            'user/' +
-            (workspace.split(':')[0]) +
-            '/' +
-            (workspace.split(':')[1]) +
-            (workspace_version
-              ? '/version/' + workspace_version + '?tab=details'
-              : '')
-          const param_epochs = hyperparams && hyperparams.find(param => param.name === '--epochs')
-          const epochs = param_epochs ? param_epochs.feasibleSpace.min + ':' + param_epochs.feasibleSpace.max : 'NA'
-          const param_batch_size = hyperparams && hyperparams.find(param => param.name === '--batch_size')
-          const batch_size = param_batch_size ? param_batch_size.feasibleSpace.min + ':' + param_batch_size.feasibleSpace.max : 'NA'
-          const param_learning_rate = hyperparams && hyperparams.find(param => param.name === '--learning_rate')
-          const learning_rate = param_learning_rate ? param_learning_rate.feasibleSpace.min + ':' + param_learning_rate.feasibleSpace.max : 'NA'
-          const runInfo = {
-            run_id: data.run_uuid,
-            start_time: moment.utc(start).valueOf() / 1000,
-            run_uuid: data.run_uuid,
-            end_time: (moment.utc(end).valueOf() / 1000) + 60,
-            experimentId: 0,
-            workspace: workspace,
-            ws_link: ws_link,
-            input_datasets: datasets,
-            input_models: models,
-            outputs: outputs,
-            epochs: epochs,
-            batch_size: batch_size,
-            learning_rate: learning_rate
-          };
-          MlflowService.getMetricsByUuid(runInfo, error, function (response) {
-            success(response);
-          });
-        },
-        error: error,
-      });
-    }
+    return $.ajax(Utils.getAjaxUrl('ajax-api/2.0/mlflow/runs/get'), {
+      type: 'GET',
+      dataType: 'json',
+      converters: {
+        'text json': StrictJsonBigInt.parse,
+      },
+      data: data,
+      jsonp: false,
+      success: success,
+      error: error,
+    });
   }
+
 
   /**
    * @param {SearchRuns} data: Immutable Record
@@ -453,7 +382,7 @@ export class MlflowService {
       error: error,
     });
   }
-
+  
   /**
    * @param {GetMetricHistory} data: Immutable Record
    * @param {function} success
@@ -461,103 +390,18 @@ export class MlflowService {
    * @return {Promise}
    */
   static getMetricHistory({ data, success, error }) {
-    if (MlflowService.runInfos[data.run_uuid]) {
-      const runInfo = { metric_key: data.metric_key, ...MlflowService.runInfos[data.run_uuid] };
-      MlflowService.getMetricByUuid(runInfo, error, function (response) {
-        success(response);
-      });
-    }
-    else {
-      return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/controller/jobs/uuid/${data.run_uuid}`, {
-        type: 'GET',
-        dataType: 'json',
-        headers: {
-          Authorization: localStorage.getItem('token')
-            ? 'Bearer ' + localStorage.getItem('token')
-            : ''
-        },
-        jsonp: false,
-        success: function (response) {
-          const start = response.data['parameters']['generated']['timestamps']['start']
-          const end = response.data['parameters']['generated']['timestamps']['end']
-          const training = response && response.data && response.data.parameters && response.data.parameters.training
-          const hyperparams = training && training.hyperparams && training.hyperparams.file.body
-            && training.hyperparams.file.name
-            ? training.hyperparams.file.name.split('.')[1] === 'json'
-              ? JSON.parse(training.hyperparams.file.body).parameters
-              : training.hyperparams.file.name.split('.')[1] === 'yaml'
-                ? yaml.load(training.hyperparams.file.body).parameters
-                : null
-            : null
-          const datums = training && training.datums
-          const datasets = datums && datums.datasets && datums.datasets.map((dataset) => dataset.name + ':' + dataset.version_name + '$' +
-            '/ds/repos/datasets/' +
-            'user/' +
-            (dataset.name.split(':')[0]) +
-            '/' +
-            (dataset.name.split(':')[1]) +
-            (dataset.version
-              ? '/version/' + dataset.version + '?tab=details'
-              : ''))
-          const models = datums && datums.models && datums.models.map((model) => model.name + ':' + model.version_name + '$' +
-            '/ds/repos/models/' +
-            'user/' +
-            (model.name.split(':')[0]) +
-            '/' +
-            (model.name.split(':')[1]) +
-            (model.version
-              ? '/version/' + model.version + '?tab=details'
-              : ''))
-          const outputs = datums && datums.outputs && datums.outputs.map((output) => output.name + ':' + output.version_name + '$' +
-            '/ds/repos/models/' +
-            'user/' +
-            (output.name.split(':')[0]) +
-            '/' +
-            (output.name.split(':')[1]) +
-            (output.version
-              ? '/version/' + output.version + '?tab=details'
-              : ''))
-          const workspace = datums && datums.workspace && datums.workspace.data && datums.workspace.data.name ? datums.workspace.data.name : 'NA'
-          const workspace_version = datums && datums.workspace && datums.workspace.data && datums.workspace.data.version ? datums.workspace.data.version : 'NA'
-          const ws_link = '/ds/repos/code/' +
-            'user/' +
-            (workspace.split(':')[0]) +
-            '/' +
-            (workspace.split(':')[1]) +
-            (workspace_version
-              ? '/version/' + workspace_version + '?tab=details'
-              : '')
-          const param_epochs = hyperparams && hyperparams.find(param => param.name === '--epochs')
-          const epochs = param_epochs ? param_epochs.feasibleSpace.min + ':' + param_epochs.feasibleSpace.max : 'NA'
-          const param_batch_size = hyperparams && hyperparams.find(param => param.name === '--batch_size')
-          const batch_size = param_batch_size ? param_batch_size.feasibleSpace.min + ':' + param_batch_size.feasibleSpace.max : 'NA'
-          const param_learning_rate = hyperparams && hyperparams.find(param => param.name === '--learning_rate')
-          const learning_rate = param_learning_rate ? param_learning_rate.feasibleSpace.min + ':' + param_learning_rate.feasibleSpace.max : 'NA'
-          const runInfo = {
-            metric_key: data.metric_key,
-            run_id: data.run_uuid,
-            start_time: moment.utc(start).valueOf() / 1000,
-            run_uuid: data.run_uuid,
-            end_time: (moment.utc(end).valueOf() / 1000) + 60,
-            experimentId: 0,
-            workspace: workspace,
-            ws_link: ws_link,
-            input_datasets: datasets,
-            input_models: models,
-            outputs: outputs,
-            epochs: epochs,
-            batch_size: batch_size,
-            learning_rate: learning_rate
-          };
-          MlflowService.getMetricByUuid(runInfo, error, function (response) {
-            success(response);
-          });
-        },
-        error: error,
-      });
-    }
+    return $.ajax(Utils.getAjaxUrl('ajax-api/2.0/mlflow/metrics/get-history'), {
+      type: 'GET',
+      dataType: 'json',
+      converters: {
+        'text json': StrictJsonBigInt.parse,
+      },
+      data: data,
+      jsonp: false,
+      success: success,
+      error: error,
+    });
   }
-
   /**
    * @param {SetTag} data: Immutable Record
    * @param {function} success
