@@ -230,7 +230,12 @@ export class MlflowService {
   }
 
   static getMetricsByUuid(data, error, success) {
-    return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query_range?query={runid="${data.run_uuid}"}&start=${data.start_time}&end=${data.end_time}&step=5`, {
+    let step = 5;
+    let start_time = data.end_time - 50000
+    if(start_time < data.start_time){
+      start_time = data.start_time
+    }
+    return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query_range?query={runid="${data.run_uuid}"}&start=${start_time}&end=${data.end_time}&step=${step}`, {
       type: 'GET',
       dataType: 'json',
       headers : {authorization: localStorage.getItem('token')
@@ -430,7 +435,12 @@ export class MlflowService {
   }
 
   static getMetricByUuid(data, error, success) {
-    return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query_range?query=${data.metric_key}{runid="${data.run_uuid}"}&start=${data.start_time}&end=${data.end_time}&step=5`, {
+    let step = 5;
+    let start_time = data.end_time - 50000
+    if(start_time < data.start_time){
+      start_time = data.start_time
+    }
+    return $.ajax(`${process.env.REACT_APP_API_SERVER}/dkube/v2/prometheus/api/v1/query_range?query=${data.metric_key}{runid="${data.run_uuid}"}&start=${start_time}&end=${data.end_time}&step=5`, {
       type: 'GET',
       dataType: 'json',
       headers: {authorization: localStorage.getItem('token')
