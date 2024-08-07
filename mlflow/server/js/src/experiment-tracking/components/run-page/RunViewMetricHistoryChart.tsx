@@ -25,6 +25,7 @@ export const RunViewMetricHistoryChart = ({
   onUpdate,
   xRange,
   yRange,
+  showPoint,
 }: RunViewMetricHistoryChartProps) => {
   const { theme } = useDesignSystemTheme();
 
@@ -62,6 +63,7 @@ export const RunViewMetricHistoryChart = ({
       xRange={xRange}
       yRange={yRange}
       onUpdate={onUpdate}
+      displayPoints={showPoint}
     />
   );
 };

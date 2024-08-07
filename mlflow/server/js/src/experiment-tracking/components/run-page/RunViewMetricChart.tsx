@@ -57,6 +57,8 @@ export interface RunViewMetricChartProps {
    * Reference to a overarching refresh manager (entity that will trigger refresh of subscribed charts)
    */
   chartRefreshManager: ChartRefreshManager;
+  maxResults: number;
+  showPoint: boolean;
 }
 
 /**
@@ -72,6 +74,8 @@ export const RunViewMetricChart = ({
   onMoveUp,
   onMoveDown,
   chartRefreshManager,
+  maxResults,
+  showPoint
 }: RunViewMetricChartProps) => {
   const { dragHandleRef, dragPreviewRef, dropTargetRef, isDragging, isOver } = useDragAndDropElement({
     dragGroupKey,
@@ -97,7 +101,7 @@ export const RunViewMetricChart = ({
     metricKeys,
     enabled: isInViewport,
     range: stepRange,
-    maxResults: 320,
+    maxResults: maxResults,
   });
 
   const { metricsHistory, error } = resultsByRunUuid[runInfo.runUuid ?? '']?.[metricKey] || {};
@@ -128,7 +132,7 @@ export const RunViewMetricChart = ({
       });
     }
     return () => {};
-  }, [chartRefreshManager, refresh, isInViewport]);
+  }, [chartRefreshManager, refresh, isInViewport, maxResults]);
 
   const yRange = useRef<[number, number] | undefined>(undefined);
 
@@ -197,6 +201,7 @@ export const RunViewMetricChart = ({
         // cases the plotly will use last known range.
         xRange={xRange}
         yRange={yRange.current}
+        showPoint={showPoint}
       />
     );
   };

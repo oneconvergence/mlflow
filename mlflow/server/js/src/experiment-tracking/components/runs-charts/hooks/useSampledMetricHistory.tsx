@@ -80,7 +80,7 @@ export const useSampledMetricHistory = (params: {
   const refreshFn = useCallback(() => {
     metricKeys.forEach((metricKey) => {
       chunk(runUuids, SAMPLED_METRIC_HISTORY_API_RUN_LIMIT).forEach((runUuidsChunk) => {
-        const action = getSampledMetricHistoryBulkAction(runUuidsChunk, metricKey, maxResults, range, 'all');
+        const action = getSampledMetricHistoryBulkAction(runUuidsChunk, metricKey, maxResults, range, 'auto');
         dispatch(action);
       });
     });
