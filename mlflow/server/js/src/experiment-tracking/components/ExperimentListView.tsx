@@ -28,6 +28,7 @@ import { RenameExperimentModal } from './modals/RenameExperimentModal';
 import { IconButton } from '../../common/components/IconButton';
 import { withRouterNext } from '../../common/utils/withRouterNext';
 import { ExperimentEntity } from '../types';
+import ProjectListView, { filterExperimentsByProject } from './ProjectListView';
 
 type Props = {
   activeExperimentIds: string[];
@@ -39,11 +40,12 @@ type State = any;
 
 export class ExperimentListView extends Component<Props, State> {
   list: any;
-
+  selectedExperiments: string[] = JSON.parse(localStorage.getItem('selected-experiments') || '[]');
   state = {
-    checkedKeys: this.props.activeExperimentIds,
+    checkedKeys: JSON.parse(localStorage.getItem('selected-experiments') || '[]'),
     hidden: false,
     searchInput: '',
+    project: localStorage.getItem('mlflow-exp-project') || 'All',
     showCreateExperimentModal: false,
     showDeleteExperimentModal: false,
     showRenameExperimentModal: false,
@@ -55,25 +57,37 @@ export class ExperimentListView extends Component<Props, State> {
     this.list = ref;
   };
 
-  componentDidUpdate = () => {
+  componentDidUpdate = (prevProps: Props) => {
     // Ensure the filter is applied
     if (this.list) {
       this.list.forceUpdateGrid();
     }
-  };
+    const exps = JSON.parse(localStorage.getItem('selected-experiments') || '[]');
+    if (prevProps.activeExperimentIds.length !== exps.length) {
+      this.pushExperimentRoute();
+    }
+  }
 
   filterExperiments = (searchInput: any) => {
-    const { experiments } = this.props;
+    const experiments = filterExperimentsByProject(this.props.experiments, this.state.project)
     const lowerCasedSearchInput = searchInput.toLowerCase();
     return lowerCasedSearchInput === ''
-      ? this.props.experiments
-      : experiments.filter(({ name }) => name.toLowerCase().includes(lowerCasedSearchInput));
+      ? experiments
+      : experiments.filter(({ name }: any) => name.toLowerCase().includes(lowerCasedSearchInput));
   };
 
   handleSearchInputChange = (event: any) => {
     this.setState({
       searchInput: event.target.value,
     });
+  };
+
+  handleProjectChange = (value: any) => {
+    const experiments = filterExperimentsByProject(this.props.experiments, value)
+    localStorage.setItem('mlflow-exp-project', value);
+    this.setState((prevState: any, props: any) => {
+      return {project: value, checkedKeys: experiments.length ?[experiments[0].experiment_id] : [] };
+    }, this.pushExperimentRoute);
   };
 
   updateSelectedExperiment = (experimentId: any, experimentName: any) => {
@@ -125,6 +139,9 @@ export class ExperimentListView extends Component<Props, State> {
     this.updateSelectedExperiment('0', '');
   };
 
+  persistSelectedExperiemnts = (selected: any) => {
+    localStorage.setItem('selected-experiments', JSON.stringify(selected));
+  }
   // Add a key if it does not exist, remove it if it does
   // Always keep at least one experiment checked if it is only the active one.
   handleCheck = (isChecked: any, key: any) => {
@@ -136,11 +153,13 @@ export class ExperimentListView extends Component<Props, State> {
       if (isChecked === false && props.activeExperimentIds.length !== 1) {
         checkedKeys = props.activeExperimentIds.filter((i: any) => i !== key);
       }
+      this.persistSelectedExperiemnts(checkedKeys);
       return { checkedKeys: checkedKeys };
     }, this.pushExperimentRoute);
   };
 
   pushExperimentRoute = () => {
+    this.persistSelectedExperiemnts(this.state.checkedKeys);
     if (this.state.checkedKeys.length > 0) {
       const route =
         this.state.checkedKeys.length === 1
@@ -257,6 +276,8 @@ export class ExperimentListView extends Component<Props, State> {
           experimentId={this.state.selectedExperimentId}
           experimentName={this.state.selectedExperimentName}
         />
+        <div>
+          <ProjectListView experiments={this.props.experiments} project={this.state.project} handleProjectChange={this.handleProjectChange}/>
         <div css={classNames.experimentTitleContainer}>
           <Typography.Title level={2} style={{ margin: 0 }}>
             Experiments
@@ -276,6 +297,7 @@ export class ExperimentListView extends Component<Props, State> {
             />
           </div>
         </div>
+	      </div>
         <Input
           placeholder="Search Experiments"
           aria-label="search experiments"
