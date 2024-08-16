@@ -14,6 +14,7 @@ import {
   HTML_EXTENSIONS,
   PDF_EXTENSIONS,
   DATA_EXTENSIONS,
+  TRACE_EXTENSIONS,
 } from '../../../common/utils/FileUtils';
 import { getLoggedModelPathsFromTags, getLoggedTablesFromTags } from '../../../common/utils/TagUtils';
 import { ONE_MB } from '../../constants';
@@ -21,6 +22,7 @@ import ShowArtifactImageView from './ShowArtifactImageView';
 import ShowArtifactTextView from './ShowArtifactTextView';
 import { LazyShowArtifactMapView } from './LazyShowArtifactMapView';
 import ShowArtifactHtmlView from './ShowArtifactHtmlView';
+import ShowArtifactTraceView from './ShowArtifactTraceView';
 import { LazyShowArtifactPdfView } from './LazyShowArtifactPdfView';
 import { LazyShowArtifactTableView } from './LazyShowArtifactTableView';
 import ShowArtifactLoggedModelView from './ShowArtifactLoggedModelView';
@@ -77,7 +79,9 @@ class ShowArtifactPage extends Component<ShowArtifactPageProps> {
       } else if (this.props.showArtifactLoggedTableView) {
         return <ShowArtifactLoggedTableView runUuid={this.props.runUuid} path={this.props.path} />;
       } else if (normalizedExtension) {
-        if (IMAGE_EXTENSIONS.has(normalizedExtension.toLowerCase())) {
+        if (TRACE_EXTENSIONS.has(normalizedExtension.toLowerCase())) {
+          return <ShowArtifactTraceView runUuid={this.props.runUuid} path={this.props.path} />;
+        } else if (IMAGE_EXTENSIONS.has(normalizedExtension.toLowerCase())) {
           return <ShowArtifactImageView runUuid={this.props.runUuid} path={this.props.path} />;
         } else if (DATA_EXTENSIONS.has(normalizedExtension.toLowerCase())) {
           return <LazyShowArtifactTableView runUuid={this.props.runUuid} path={this.props.path} />;
