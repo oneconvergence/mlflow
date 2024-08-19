@@ -13,6 +13,7 @@ export interface RunViewMetricHistoryChartProps extends Pick<RunsMetricsLinePlot
   runInfo: RunInfoEntity | UseGetRunQueryResponseRunInfo;
   metricsHistory: MetricEntity[];
   onUpdate: RunsMetricsLinePlotProps['onUpdate'];
+  showPoint: boolean;
 }
 
 /**
