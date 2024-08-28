@@ -7,7 +7,7 @@ import time
 import uuid
 from functools import reduce
 from typing import Dict, List, Optional, Tuple
-
+import os 
 import sqlalchemy
 import sqlalchemy.sql.expression as sql
 from sqlalchemy import and_, func, sql, text
@@ -422,6 +422,10 @@ class SqlAlchemyStore(AbstractStore):
         Permanently delete a experiment (metadata and metrics, tags, parameters).
         This is used by the ``mlflow gc`` command line and is not intended to be used elsewhere.
         """
+        if os.getenv('HARD_DELETION_DISABLED') == 'true':
+            logger.info(f"Hard deletion of experiments is disabled. Experiment ID: {experiment_id} was not deleted.")
+            return
+        
         with self.ManagedSessionMaker() as session:
             experiment = self._get_experiment(
                 experiment_id=experiment_id, session=session, view_type=ViewType.DELETED_ONLY
@@ -662,6 +666,10 @@ class SqlAlchemyStore(AbstractStore):
         Permanently delete a run (metadata and metrics, tags, parameters).
         This is used by the ``mlflow gc`` command line and is not intended to be used elsewhere.
         """
+        if os.getenv('HARD_DELETION_DISABLED') == 'true':
+            logger.info(f"Hard deletion of runs is disabled. Run ID: {run_id} was not deleted.")
+            return
+        
         with self.ManagedSessionMaker() as session:
             run = self._get_run(run_uuid=run_id, session=session)
             session.delete(run)
