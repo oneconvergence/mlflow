@@ -478,6 +478,10 @@ class FileStore(AbstractStore):
         Permanently delete an experiment.
         This is used by the ``mlflow gc`` command line and is not intended to be used elsewhere.
         """
+        if os.getenv('HARD_DELETION_DISABLED') == 'true':
+            logger.info(f"Hard deletion of experiments is disabled. Experiment ID: {experiment_id} was not deleted.")
+            return
+            
         experiment_dir = self._get_experiment_path(experiment_id, ViewType.DELETED_ONLY)
         shutil.rmtree(experiment_dir)
 
@@ -551,6 +555,10 @@ class FileStore(AbstractStore):
         Permanently delete a run (metadata and metrics, tags, parameters).
         This is used by the ``mlflow gc`` command line and is not intended to be used elsewhere.
         """
+        if os.getenv('HARD_DELETION_DISABLED') == 'true':
+            logger.info(f"Hard deletion of runs is disabled. Run ID: {run_id} was not deleted.")
+            return
+        
         _, run_dir = self._find_run_root(run_id)
         shutil.rmtree(run_dir)
 
