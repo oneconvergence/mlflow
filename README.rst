@@ -234,14 +234,15 @@ Running MLFLOW Locally
     - Navigate to ``mlflow/server/js/src/common/utils/FetchUtils.js``
     - Update the getAjaxUrl function as follows:
 
-.. code-block:: shell
-    export const getAjaxUrl = (relativeUrl: any) => {
-        // @ts-expect-error TS(4111): Property 'MLFLOW_USE_ABSOLUTE_AJAX_URLS' comes from an in...
-        if (process.env.MLFLOW_USE_ABSOLUTE_AJAX_URLS === 'true' && !relativeUrl.startsWith('/')) {
-            return '/mlflow/' + relativeUrl;
-        }
+```javascript
+export const getAjaxUrl = (relativeUrl: any) => {
+    // @ts-expect-error TS(4111): Property 'MLFLOW_USE_ABSOLUTE_AJAX_URLS' comes from an in...
+    if (process.env.MLFLOW_USE_ABSOLUTE_AJAX_URLS === 'true' && !relativeUrl.startsWith('/')) {
         return '/mlflow/' + relativeUrl;
-    };
+    }
+    return '/mlflow/' + relativeUrl;
+};
+```
 
 6. **Start the Application**
     ``npm start``
