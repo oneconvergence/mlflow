@@ -213,3 +213,35 @@ MLflow is currently maintained by the following core members with significant co
 - `Serena Ruan <https://github.com/serena-ruan>`_
 - `Weichen Xu <https://github.com/WeichenXu123>`_
 - `Yuki Watanabe <https://github.com/B-Step62>`_
+
+
+Running MLFLOW Locally
+----------------------
+
+**Steps**
+
+1. **Clone the Git Repository**
+   - Repository URL: [MLFlow GitHub Repo](https://github.com/oneconvergence/mlflow)
+   - Branch: `d3x-v2.15.1`
+
+2. **Navigate to the Project Directory**
+   ``cd mlflow/server/js``
+3. **Install Dependencies**
+    ``yarn install``
+4. **Add Proxy in package.json**
+    ``"proxy": "your.domain.and.port"``
+5. **Modify FetchUtils.js**
+    - Navigate to ``mlflow/server/js/src/common/utils/FetchUtils.js``
+    - Update the getAjaxUrl function as follows:
+
+    ``export const getAjaxUrl = (relativeUrl: any) => {
+        // @ts-expect-error TS(4111): Property 'MLFLOW_USE_ABSOLUTE_AJAX_URLS' comes from an in...
+        if (process.env.MLFLOW_USE_ABSOLUTE_AJAX_URLS === 'true' && !relativeUrl.startsWith('/')) {
+            return '/mlflow/' + relativeUrl;
+        }
+        return '/mlflow/' + relativeUrl;
+    };``
+
+6. **Start the Application**
+    ``npm start``
+

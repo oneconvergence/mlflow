@@ -16,6 +16,7 @@ import {
   DialogComboboxTrigger,
   Switch,
 } from '@databricks/design-system';
+import Fuse from 'fuse.js';
 import { compact, mapValues, values } from 'lodash';
 import { useMemo, useState, useEffect } from 'react';
 import { FormattedMessage, defineMessages, useIntl } from 'react-intl';
@@ -53,14 +54,15 @@ const EmptyMetricsFiltered = () => (
 const EmptyMetricsNotRecorded = ({ label }: { label: React.ReactNode }) => <Empty title={label} description={null} />;
 
 const metricKeyMatchesFilter = (filter: string, metricKey: string) =>
-  metricKey.toLowerCase().startsWith(filter.toLowerCase()) ||
-  normalizeChartMetricKey(metricKey).toLowerCase().startsWith(filter.toLowerCase());
+  metricKey.toLowerCase().includes(filter.toLowerCase()) ||
+  normalizeChartMetricKey(metricKey).toLowerCase().includes(filter.toLowerCase());
 
 /**
  * Internal component that displays a single collapsible section with charts
  */
 const RunViewMetricChartsSection = ({
   metricKeys,
+  filteredMetricKeys,
   search,
   runInfo,
   chartRefreshManager,
@@ -69,6 +71,7 @@ const RunViewMetricChartsSection = ({
   showPoint,
 }: {
   metricKeys: string[];
+  filteredMetricKeys: string[];
   search: string;
   runInfo: RunInfoEntity | UseGetRunQueryResponseRunInfo;
   onReorderChart: (sourceChartKey: string, targetChartKey: string) => void;
@@ -77,8 +80,6 @@ const RunViewMetricChartsSection = ({
   showPoint: boolean;
 }) => {
   const { theme } = useDesignSystemTheme();
-
-  const filteredMetricKeys = metricKeys.filter((metricKey) => metricKeyMatchesFilter(search, metricKey));
 
   const { canMoveDown, canMoveUp, moveChartDown, moveChartUp } = useChartMoveUpDownFunctions(
     filteredMetricKeys,
@@ -158,9 +159,28 @@ export const RunViewMetricCharts = ({
   const maxSamples = [320, 500, 1000, 2500]
   const { orderedMetricKeys, onReorderChart } = useOrderedCharts(metricKeys, 'RunView' + mode, runInfo.runUuid ?? '');
 
+  // Setting up Fuse for Fuzzy Searching
+  const fuseOptions = {
+    includeScore: true,
+    minMatchCharLength: 1, // Allows matching on single characters
+    threshold: 0.6, // Adjust for stricter or more lenient matching
+    shouldSort: true, // Prioritizes results by relevance
+    matchAllTokens: true, // Ensures each keyword is matched somewhere in the string
+    findAllMatches: true, // Matches even partial matches anywhere in the string
+    useExtendedSearch: true // Allows partial matches within substrings
+  };
+
+  const fuse = new Fuse(metricKeys, fuseOptions);
+
+  // Prepare the extended search pattern
+  const searchTerms = search.split(" ").filter(Boolean); // Split by spaces and remove empty items
+  const extendedSearchPattern = searchTerms.map(term => `"'${term}"`).join(" ");
+
+  const filteredMetricKeys = search && search !== '' ? fuse.search(extendedSearchPattern).map((item) => item.item) : metricKeys;
+
   const noMetricsRecorded = !metricKeys.length;
-  const allMetricsFilteredOut =
-    !noMetricsRecorded && !metricKeys.some((metricKey) => metricKeyMatchesFilter(search, metricKey));
+  const allMetricsFilteredOut = !filteredMetricKeys.length;
+
   const showConfigArea = !noMetricsRecorded;
   const { theme } = useDesignSystemTheme();
   const showCharts = !noMetricsRecorded && !allMetricsFilteredOut;
@@ -270,6 +290,7 @@ export const RunViewMetricCharts = ({
             {showCharts && (
               <RunViewMetricChartsSection
                 metricKeys={orderedMetricKeys}
+                filteredMetricKeys={filteredMetricKeys}
                 runInfo={runInfo}
                 search={search}
                 onReorderChart={onReorderChart}
