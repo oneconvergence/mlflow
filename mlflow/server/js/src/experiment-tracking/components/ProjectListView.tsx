@@ -26,11 +26,11 @@ export const filterExperimentsByProject = (experiments:any, selectedProject:any)
       return experiments;
   } else if (selectedProject === "Default") {
       return experiments.filter(
-          (experiment:any) => !experiment.tags || !experiment.tags.some((tag:any) => tag.key === "project")
+          (experiment:any) => !experiment.tags || !experiment.tags.some((tag:any) => tag.key.toLowerCase() === "project")
       );
   } else {
       return experiments.filter(
-          (experiment:any) => experiment.tags && experiment.tags.some((tag:any) => tag.key === "project" && tag.value === selectedProject)
+          (experiment:any) => experiment.tags && experiment.tags.some((tag:any) => tag.key.toLowerCase() === "project" && tag.value === selectedProject)
       );
   }
 }
@@ -40,11 +40,11 @@ export class ProjectListView extends Component<Props, State> {
     const { experiments } = this.props;
     const projects = experiments
       .filter(experiment => {
-        const projectTag = experiment.tags && experiment.tags.find((tag :any) => tag.key === "project");
+        const projectTag = experiment.tags && experiment.tags.find((tag :any) => tag.key.toLowerCase() === "project");
         return projectTag !== undefined;
       })
       .map(experiment => {
-        const projectTag = experiment.tags.find((tag:any) => tag.key === "project");
+        const projectTag = experiment.tags.find((tag:any) => tag.key.toLowerCase() === "project");
         return projectTag ? projectTag.value : null;
       });
       return ['All','Default', ...new Set(projects)];
