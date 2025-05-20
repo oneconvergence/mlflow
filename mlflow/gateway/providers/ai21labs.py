@@ -1,15 +1,16 @@
 import time
 
-from fastapi import HTTPException
-from fastapi.encoders import jsonable_encoder
-
 from mlflow.gateway.config import AI21LabsConfig, RouteConfig
+from mlflow.gateway.exceptions import AIGatewayException
 from mlflow.gateway.providers.base import BaseProvider
 from mlflow.gateway.providers.utils import rename_payload_keys, send_request
-from mlflow.gateway.schemas import chat, completions, embeddings
+from mlflow.gateway.schemas import completions
 
 
 class AI21LabsProvider(BaseProvider):
+    NAME = "AI21Labs"
+    CONFIG_TYPE = AI21LabsConfig
+
     def __init__(self, config: RouteConfig) -> None:
         super().__init__(config)
         if config.model.config is None or not isinstance(config.model.config, AI21LabsConfig):
@@ -19,6 +20,8 @@ class AI21LabsProvider(BaseProvider):
         self.base_url = f"https://api.ai21.com/studio/v1/{self.config.model.name}/"
 
     async def completions(self, payload: completions.RequestPayload) -> completions.ResponsePayload:
+        from fastapi.encoders import jsonable_encoder
+
         payload = jsonable_encoder(payload, exclude_none=True)
         self.check_for_model_field(payload)
         key_mapping = {
@@ -28,11 +31,11 @@ class AI21LabsProvider(BaseProvider):
         }
         for k1, k2 in key_mapping.items():
             if k2 in payload:
-                raise HTTPException(
+                raise AIGatewayException(
                     status_code=422, detail=f"Invalid parameter {k2}. Use {k1} instead."
                 )
-        if payload.get("stream", None) == "true":
-            raise HTTPException(
+        if payload.get("stream", False):
+            raise AIGatewayException(
                 status_code=422,
                 detail="Setting the 'stream' parameter to 'true' is not supported with the MLflow "
                 "Gateway.",
@@ -81,16 +84,4 @@ class AI21LabsProvider(BaseProvider):
                 completion_tokens=None,
                 total_tokens=None,
             ),
-        )
-
-    async def chat(self, payload: chat.RequestPayload) -> None:
-        # AI21Labs does not have a chat endpoint
-        raise HTTPException(
-            status_code=404, detail="The chat route is not available for AI21Labs models."
-        )
-
-    async def embeddings(self, payload: embeddings.RequestPayload) -> None:
-        # AI21Labs does not have an embeddings endpoint
-        raise HTTPException(
-            status_code=404, detail="The embeddings route is not available for AI21Labs models."
         )

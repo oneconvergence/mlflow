@@ -4,16 +4,15 @@ import { DesignSystemThemeProvider } from '@databricks/design-system';
 
 export type DarkModePref = 'system' | 'dark' | 'light';
 
-const DARK_MODE_PREF_DEFAULT = 'light';
+export const DARK_MODE_PREF_DEFAULT = 'system';
+
+export const LOCAL_STORAGE_DARK_MODE_PREF_KEY: any = 'dark-mode-pref';
 
 export interface SupportsDuBoisThemesProps {
   disabled?: boolean;
 }
 
-export const SupportsDuBoisThemes: React.FC<SupportsDuBoisThemesProps> = ({
-  disabled = false,
-  children,
-}) => {
+export const SupportsDuBoisThemes: React.FC<SupportsDuBoisThemesProps> = ({ disabled = false, children }) => {
   // eslint-disable-next-line react/forbid-elements
   return <DesignSystemThemeProvider isDarkMode={false}>{children}</DesignSystemThemeProvider>;
 };
@@ -34,3 +33,7 @@ export function systemPrefersDark(): boolean {
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 export function setDarkModeSupported(value: boolean) {}
+
+export function WorkspaceImg(props: React.ImgHTMLAttributes<HTMLImageElement> & { src?: string; alt?: string }) {
+  return <img alt="altt" {...props} />;
+}

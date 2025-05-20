@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import requests
 
@@ -6,20 +6,21 @@ from mlflow import MlflowException
 from mlflow.deployments import BaseDeploymentClient
 from mlflow.deployments.constants import (
     MLFLOW_DEPLOYMENT_CLIENT_REQUEST_RETRY_CODES,
-    MLFLOW_DEPLOYMENT_PREDICT_TIMEOUT,
 )
-from mlflow.deployments.server.config import Endpoint
 from mlflow.deployments.server.constants import (
     MLFLOW_DEPLOYMENTS_CRUD_ENDPOINT_BASE,
     MLFLOW_DEPLOYMENTS_ENDPOINTS_BASE,
     MLFLOW_DEPLOYMENTS_QUERY_SUFFIX,
 )
 from mlflow.deployments.utils import resolve_endpoint_url
-from mlflow.environment_variables import MLFLOW_HTTP_REQUEST_TIMEOUT
+from mlflow.environment_variables import (
+    MLFLOW_DEPLOYMENT_PREDICT_TIMEOUT,
+    MLFLOW_HTTP_REQUEST_TIMEOUT,
+)
 from mlflow.protos.databricks_pb2 import BAD_REQUEST
 from mlflow.store.entities.paged_list import PagedList
-from mlflow.tracking._tracking_service.utils import _get_default_host_creds
 from mlflow.utils.annotations import experimental
+from mlflow.utils.credentials import get_default_host_creds
 from mlflow.utils.rest_utils import augmented_raise_for_status, http_request
 from mlflow.utils.uri import join_paths
 
@@ -30,15 +31,15 @@ if TYPE_CHECKING:
 @experimental
 class MlflowDeploymentClient(BaseDeploymentClient):
     """
-    Client for interacting with the MLflow Deployments Server.
+    Client for interacting with the MLflow AI Gateway.
 
     Example:
 
-    First, start the MLflow Deployments Server:
+    First, start the MLflow AI Gateway:
 
     .. code-block:: bash
 
-        mlflow deployments start-server --config-path path/to/config.yaml
+        mlflow gateway start --config-path path/to/config.yaml
 
     Then, create a client and use it to interact with the server:
 
@@ -52,7 +53,7 @@ class MlflowDeploymentClient(BaseDeploymentClient):
             {
                 "name": "chat",
                 "endpoint_type": "llm/v1/chat",
-                "model": {"name": "gpt-3.5-turbo", "provider": "openai"},
+                "model": {"name": "gpt-4o-mini", "provider": "openai"},
                 "endpoint_url": "http://localhost:5000/gateway/chat/invocations",
             },
         ]
@@ -128,7 +129,7 @@ class MlflowDeploymentClient(BaseDeploymentClient):
             call_kwargs["json"] = json_body
 
         response = http_request(
-            host_creds=_get_default_host_creds(self.target_uri),
+            host_creds=get_default_host_creds(self.target_uri),
             endpoint=route,
             method=method,
             timeout=MLFLOW_HTTP_REQUEST_TIMEOUT.get() if timeout is None else timeout,
@@ -142,10 +143,13 @@ class MlflowDeploymentClient(BaseDeploymentClient):
     @experimental
     def get_endpoint(self, endpoint) -> "Endpoint":
         """
-        Gets a specified endpoint configured for the MLflow Deployments Server.
+        Gets a specified endpoint configured for the MLflow AI Gateway.
 
-        :param endpoint: The name of the endpoint to retrieve.
-        :return: An `Endpoint` object representing the endpoint.
+        Args:
+            endpoint: The name of the endpoint to retrieve.
+
+        Returns:
+            An `Endpoint` object representing the endpoint.
 
         Example:
 
@@ -158,10 +162,13 @@ class MlflowDeploymentClient(BaseDeploymentClient):
             assert endpoint.dict() == {
                 "name": "chat",
                 "endpoint_type": "llm/v1/chat",
-                "model": {"name": "gpt-3.5-turbo", "provider": "openai"},
+                "model": {"name": "gpt-4o-mini", "provider": "openai"},
                 "endpoint_url": "http://localhost:5000/gateway/chat/invocations",
             }
         """
+        # Delayed import to avoid importing mlflow.gateway in the module scope
+        from mlflow.deployments.server.config import Endpoint
+
         route = join_paths(MLFLOW_DEPLOYMENTS_CRUD_ENDPOINT_BASE, endpoint)
         response = self._call_endpoint("GET", route)
         return Endpoint(
@@ -172,6 +179,9 @@ class MlflowDeploymentClient(BaseDeploymentClient):
         )
 
     def _list_endpoints(self, page_token=None) -> "PagedList[Endpoint]":
+        # Delayed import to avoid importing mlflow.gateway in the module scope
+        from mlflow.deployments.server.config import Endpoint
+
         params = None if page_token is None else {"page_token": page_token}
         response_json = self._call_endpoint(
             "GET", MLFLOW_DEPLOYMENTS_CRUD_ENDPOINT_BASE, json_body=params
@@ -192,10 +202,12 @@ class MlflowDeploymentClient(BaseDeploymentClient):
         return PagedList(routes, next_page_token)
 
     @experimental
-    def list_endpoints(self) -> "List[Endpoint]":
+    def list_endpoints(self) -> "list[Endpoint]":
         """
-        List endpoints configured for the MLflow Deployments Server.
-        :return: A list of ``Endpoint`` objects.
+        List endpoints configured for the MLflow AI Gateway.
+
+        Returns:
+            A list of ``Endpoint`` objects.
 
         Example:
 
@@ -210,10 +222,11 @@ class MlflowDeploymentClient(BaseDeploymentClient):
                 {
                     "name": "chat",
                     "endpoint_type": "llm/v1/chat",
-                    "model": {"name": "gpt-3.5-turbo", "provider": "openai"},
+                    "model": {"name": "gpt-4o-mini", "provider": "openai"},
                     "endpoint_url": "http://localhost:5000/gateway/chat/invocations",
                 },
             ]
+
         """
         endpoints = []
         next_page_token = None
@@ -226,14 +239,17 @@ class MlflowDeploymentClient(BaseDeploymentClient):
         return endpoints
 
     @experimental
-    def predict(self, deployment_name=None, inputs=None, endpoint=None) -> Dict[str, Any]:
+    def predict(self, deployment_name=None, inputs=None, endpoint=None) -> dict[str, Any]:
         """
         Submit a query to a configured provider endpoint.
 
-        :param deployment_name: Unused.
-        :param inputs: The inputs to the query, as a dictionary.
-        :param endpoint: The name of the endpoint to query.
-        :return: A dictionary containing the response from the endpoint.
+        Args:
+            deployment_name: Unused.
+            inputs: The inputs to the query, as a dictionary.
+            endpoint: The name of the endpoint to query.
+
+        Returns:
+            A dictionary containing the response from the endpoint.
 
         Example:
 
@@ -251,7 +267,7 @@ class MlflowDeploymentClient(BaseDeploymentClient):
                 "id": "chatcmpl-8OLoQuaeJSLybq3NBoe0w5eyqjGb9",
                 "object": "chat.completion",
                 "created": 1700814410,
-                "model": "gpt-3.5-turbo-0613",
+                "model": "gpt-4o-mini",
                 "choices": [
                     {
                         "index": 0,

@@ -7,7 +7,7 @@
 
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { injectIntl } from 'react-intl';
+import { IntlShape, injectIntl } from 'react-intl';
 
 import { GenericInputModal } from './GenericInputModal';
 import { RenameForm, NEW_NAME_FIELD } from './RenameForm';
@@ -21,13 +21,11 @@ type Props = {
   runName: string;
   onClose: (...args: any[]) => any;
   updateRunApi: (...args: any[]) => any;
-  intl: {
-    formatMessage: (...args: any[]) => any;
-  };
+  intl: IntlShape;
   onSuccess?: (...args: any[]) => any;
 };
 
-export class RenameRunModalImpl extends Component<Props> {
+class RenameRunModalImpl extends Component<Props> {
   handleRenameRun = (values: any) => {
     // get value of input field
     const newRunName = values[NEW_NAME_FIELD];
@@ -56,7 +54,7 @@ export class RenameRunModalImpl extends Component<Props> {
         onClose={this.props.onClose}
       >
         <RenameForm
-          type='run'
+          type="run"
           name={runName}
           // @ts-expect-error TS(2769): No overload matches this call.
           visible={isOpen}
@@ -65,8 +63,7 @@ export class RenameRunModalImpl extends Component<Props> {
               throw new Error(
                 this.props.intl.formatMessage({
                   defaultMessage: 'Run name cannot consist only of whitespace!',
-                  description:
-                    "An error shown when user sets the run's name to whitespace characters only",
+                  description: "An error shown when user sets the run's name to whitespace characters only",
                 }),
               );
             }
@@ -82,6 +79,5 @@ const mapDispatchToProps = {
   updateRunApi,
 };
 
-// @ts-expect-error TS(2769): No overload matches this call.
 export const RenameRunModalWithIntl = injectIntl(RenameRunModalImpl);
 export const RenameRunModal = connect(undefined, mapDispatchToProps)(RenameRunModalWithIntl);

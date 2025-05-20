@@ -1,109 +1,61 @@
-import type { ReactWrapper } from 'enzyme';
-import { mountWithIntl } from '../../../../../common/utils/TestUtils';
-import { GetExperimentRunsContext } from '../../contexts/GetExperimentRunsContext';
+import { MockedReduxStoreProvider } from '../../../../../common/utils/TestUtils';
 import { EXPERIMENT_RUNS_MOCK_STORE } from '../../fixtures/experiment-runs.fixtures';
-import { SearchExperimentRunsFacetsState } from '../../models/SearchExperimentRunsFacetsState';
-import type { GetExperimentRunsContextType } from '../../contexts/GetExperimentRunsContext';
-import {
-  ExperimentViewRunsImpl as ExperimentViewRuns,
-  ExperimentViewRunsProps,
-} from './ExperimentViewRuns';
+import { ExperimentViewRuns, ExperimentViewRunsProps } from './ExperimentViewRuns';
+import { MemoryRouter } from '../../../../../common/utils/RoutingUtils';
+import { createExperimentPageUIState } from '../../models/ExperimentPageUIState';
+import { createExperimentPageSearchFacetsState } from '../../models/ExperimentPageSearchFacetsState';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react';
+import { IntlProvider } from 'react-intl';
+import { setupServer } from '../../../../../common/utils/setup-msw';
+import { rest } from 'msw';
+import userEvent from '@testing-library/user-event';
+import { useFetchedRunsNotification } from '../../hooks/useFetchedRunsNotification';
+import { useExperimentRunRows } from '../../utils/experimentPage.row-utils';
+import { DesignSystemProvider } from '@databricks/design-system';
 
-/**
- * Mock all expensive utility functions
- */
-const mockPrepareRunsGridData = jest.fn();
-jest.mock('../../utils/experimentPage.row-utils', () => ({
-  ...jest.requireActual('../../utils/experimentPage.row-utils'),
-  prepareRunsGridData: (...params: any) => mockPrepareRunsGridData(...params),
+jest.setTimeout(90000); // Larger timeout for integration testing (table rendering)
+
+// Rendering ag-grid table takes a lot of resources and time, we increase waitFor()'s timeout from default 5000 ms
+const WAIT_FOR_TIMEOUT = 10_000;
+
+// Enable feature flags
+jest.mock('../../../../../common/utils/FeatureUtils', () => ({
+  ...jest.requireActual('../../../../../common/utils/FeatureUtils'),
 }));
 
+// Mock rows preparation function to enable contract test
+jest.mock('../../utils/experimentPage.row-utils', () => {
+  const module = jest.requireActual('../../utils/experimentPage.row-utils');
+  return {
+    ...module,
+    useExperimentRunRows: jest.fn(module.useExperimentRunRows),
+  };
+});
+
+// Mock less relevant, costly components
 jest.mock('../../hooks/useCreateNewRun', () => ({
   CreateNewRunContextProvider: ({ children }: any) => <div>{children}</div>,
 }));
 jest.mock('./ExperimentViewRunsControls', () => ({
   ExperimentViewRunsControls: () => <div />,
 }));
-jest.mock('./ExperimentViewRunsTable', () => ({
-  ExperimentViewRunsTable: ({ loadMoreRunsFunc }: { loadMoreRunsFunc: () => void }) => (
-    <div>
-      <button data-testid='load-more' onClick={loadMoreRunsFunc} />
-    </div>
-  ),
-}));
+jest.mock('../../hooks/useFetchedRunsNotification', () => ({ useFetchedRunsNotification: jest.fn() }));
 
-/**
- * Mock all external components for performant mount() usage
- */
-jest.mock('./ExperimentViewRunsEmptyTable', () => ({
-  ExperimentViewRunsEmptyTable: () => <div />,
-}));
-
-jest.mock('../../../../../common/components/ag-grid/AgGridLoader', () => {
-  const apiMock = {
-    showLoadingOverlay: jest.fn(),
-    hideOverlay: jest.fn(),
-    setRowData: jest.fn(),
-  };
-  const columnApiMock = {};
-  return {
-    MLFlowAgGridLoader: ({ onGridReady }: any) => {
-      onGridReady({
-        api: apiMock,
-        columnApi: columnApiMock,
-      });
-      return <div />;
-    },
-  };
-});
-
-/**
- * Mock <FormattedMessage /> instead of providing intl context to make
- * settings enzyme wrapper's props prossible
- */
-jest.mock('react-intl', () => ({
-  ...jest.requireActual('react-intl'),
-  FormattedMessage: () => <div />,
-}));
-
-const mockedShowNotification = jest.fn();
-jest.mock('../../hooks/useFetchedRunsNotification', () => {
-  return {
-    useFetchedRunsNotification: () => mockedShowNotification,
-  };
-});
-
-const mockTagKeys = Object.keys(
-  EXPERIMENT_RUNS_MOCK_STORE.entities.tagsByRunUuid['experiment123456789_run1'],
-);
+const mockTagKeys = Object.keys(EXPERIMENT_RUNS_MOCK_STORE.entities.tagsByRunUuid['experiment123456789_run1']);
 
 describe('ExperimentViewRuns', () => {
-  let contextValue: Partial<GetExperimentRunsContextType> = {};
+  const server = setupServer();
+
+  const loadMoreRunsMockFn = jest.fn();
 
   beforeAll(() => {
-    jest.useFakeTimers();
     jest.setSystemTime(new Date(2022, 0, 1));
-  });
-
-  afterAll(() => {
-    jest.useRealTimers();
+    server.listen();
   });
 
   beforeEach(() => {
-    mockedShowNotification.mockClear();
-    mockPrepareRunsGridData.mockClear();
-    mockPrepareRunsGridData.mockImplementation(() => []);
-
-    contextValue = {
-      actions: {},
-      searchFacetsState: Object.assign(new SearchExperimentRunsFacetsState(), {
-        runsPinned: ['experiment123456789_run1'],
-      }),
-      fetchExperimentRuns: jest.fn(),
-      updateSearchFacets: jest.fn(),
-      loadMoreRuns: jest.fn(),
-      isPristine: jest.fn(),
-    } as any;
+    jest.mocked(useExperimentRunRows).mockClear();
   });
 
   const defaultProps: ExperimentViewRunsProps = {
@@ -111,77 +63,146 @@ describe('ExperimentViewRuns', () => {
     runsData: {
       paramKeyList: ['p1', 'p2', 'p3'],
       metricKeyList: ['m1', 'm2', 'm3'],
+      modelVersionsByRunUuid: {},
+      runUuidsMatchingFilter: ['experiment123456789_run1'],
       tagsList: [EXPERIMENT_RUNS_MOCK_STORE.entities.tagsByRunUuid['experiment123456789_run1']],
       runInfos: [EXPERIMENT_RUNS_MOCK_STORE.entities.runInfosByUuid['experiment123456789_run1']],
       paramsList: [[{ key: 'p1', value: 'pv1' }]],
       metricsList: [[{ key: 'm1', value: 'mv1' }]],
       datasetsList: [[{ dataset: { digest: 'ab12', name: 'dataset_name' } }]],
+      experimentTags: {},
     } as any,
     isLoading: false,
+    searchFacetsState: createExperimentPageSearchFacetsState(),
+    uiState: Object.assign(createExperimentPageUIState(), {
+      runsPinned: ['experiment123456789_run1'],
+    }),
+    isLoadingRuns: false,
+    loadMoreRuns: loadMoreRunsMockFn,
+    refreshRuns: jest.fn(),
+    requestError: null,
+    moreRunsAvailable: false,
   };
-  const ProxyComponent = (additionalProps: Partial<ExperimentViewRunsProps> = {}) => (
-    <GetExperimentRunsContext.Provider value={contextValue as any}>
-      <ExperimentViewRuns {...defaultProps} {...additionalProps} />
-    </GetExperimentRunsContext.Provider>
-  );
-  const createWrapper = (additionalProps: Partial<ExperimentViewRunsProps> = {}) =>
-    // @ts-expect-error TS(2709): Cannot use namespace 'ReactWrapper' as a type.
-    mountWithIntl(<ProxyComponent {...additionalProps} />) as ReactWrapper;
 
-  test('should properly call getting row data function', () => {
-    createWrapper();
-    expect(mockPrepareRunsGridData).toBeCalledWith(
-      expect.objectContaining({
-        metricKeyList: ['m1', 'm2', 'm3'],
-        paramKeyList: ['p1', 'p2', 'p3'],
-        tagKeyList: mockTagKeys,
-        runsPinned: ['experiment123456789_run1'],
-        referenceTime: new Date(),
-        nestChildren: true,
-      }),
+  const queryClient = new QueryClient();
+
+  const renderTestComponent = (additionalProps: Partial<ExperimentViewRunsProps> = {}) => {
+    return render(<ExperimentViewRuns {...defaultProps} {...additionalProps} />, {
+      wrapper: ({ children }) => (
+        <MemoryRouter>
+          <IntlProvider locale="en">
+            <QueryClientProvider client={queryClient}>
+              <DesignSystemProvider>
+                <MockedReduxStoreProvider
+                  state={{
+                    entities: {
+                      modelVersionsByRunUuid: {},
+                      colorByRunUuid: {},
+                    },
+                  }}
+                >
+                  {children}
+                </MockedReduxStoreProvider>
+              </DesignSystemProvider>
+            </QueryClientProvider>
+          </IntlProvider>
+        </MemoryRouter>
+      ),
+    });
+  };
+
+  test('should render the table with all relevant data', async () => {
+    renderTestComponent();
+
+    // Assert cell with the name
+    await waitFor(
+      () => {
+        expect(screen.getByRole('gridcell', { name: /experiment123456789_run1$/ })).toBeInTheDocument();
+      },
+      {
+        timeout: WAIT_FOR_TIMEOUT,
+      },
     );
+
+    // Assert cell with the dataset
+    expect(screen.getByRole('gridcell', { name: /dataset_name \(ab12\)/ })).toBeInTheDocument();
   });
 
-  test('should properly react to the new runs data', () => {
-    const wrapper = createWrapper();
+  test('[contract] should properly call getting row data function', async () => {
+    renderTestComponent();
 
+    await waitFor(() => {
+      expect(useExperimentRunRows).toBeCalledWith(
+        expect.objectContaining({
+          metricKeyList: ['m1', 'm2', 'm3'],
+          paramKeyList: ['p1', 'p2', 'p3'],
+          tagKeyList: mockTagKeys,
+          runsPinned: ['experiment123456789_run1'],
+          nestChildren: true,
+        }),
+      );
+    });
+  });
+
+  test('should properly react to the new runs data', async () => {
+    // const wrapper = createWrapper();
+    const { rerender } = renderTestComponent();
+
+    await waitFor(() => {
+      expect(useExperimentRunRows).toBeCalled();
+    });
     // Assert that we're not calling for generating columns/rows
     // while having "newparam" parameter
-    expect(mockPrepareRunsGridData).not.toBeCalledWith(
+    expect(useExperimentRunRows).not.toBeCalledWith(
       expect.objectContaining({
         paramKeyList: ['p1', 'p2', 'p3', 'newparam'],
       }),
     );
 
     // Update the param key list with "newparam" as a new entry
-    wrapper.setProps({
-      runsData: { ...defaultProps.runsData, paramKeyList: ['p1', 'p2', 'p3', 'newparam'] },
-    });
-
-    // Assert that "newparam" parameter is being included in calls
-    // for new columns and rows
-    expect(mockPrepareRunsGridData).toBeCalledWith(
-      expect.objectContaining({
-        paramKeyList: ['p1', 'p2', 'p3', 'newparam'],
-      }),
+    rerender(
+      <ExperimentViewRuns
+        {...defaultProps}
+        runsData={{ ...defaultProps.runsData, paramKeyList: ['p1', 'p2', 'p3', 'newparam'] }}
+      />,
     );
+
+    await waitFor(() => {
+      // Assert that "newparam" parameter is being included in calls
+      // for new columns and rows
+      expect(useExperimentRunRows).toBeCalledWith(
+        expect.objectContaining({
+          paramKeyList: ['p1', 'p2', 'p3', 'newparam'],
+        }),
+      );
+    });
   });
 
   test('displays "(...) fetched more runs" notification when necessary', async () => {
-    contextValue.moreRunsAvailable = true;
-    contextValue.isLoadingRuns = false;
+    const mockedShowNotification = jest.fn();
+    jest.mocked(useFetchedRunsNotification).mockImplementation(() => mockedShowNotification);
+    loadMoreRunsMockFn.mockResolvedValue([{ info: { runUuid: 'new' } }]);
+    renderTestComponent({
+      moreRunsAvailable: true,
+      isLoadingRuns: false,
+    });
 
-    contextValue.loadMoreRuns = jest.fn().mockResolvedValue([{ info: { run_uuid: 'new' } }]);
-    const wrapper = createWrapper();
-
-    const button = wrapper.find("[data-testid='load-more']").first();
-
-    button.simulate('click');
-    await contextValue.loadMoreRuns();
-
-    expect(mockedShowNotification).toBeCalledWith(
-      [{ info: { run_uuid: 'new' } }],
-      [EXPERIMENT_RUNS_MOCK_STORE.entities.runInfosByUuid['experiment123456789_run1']],
+    await waitFor(
+      () => {
+        expect(screen.getByRole('button', { name: 'Load more' })).toBeInTheDocument();
+      },
+      {
+        timeout: WAIT_FOR_TIMEOUT,
+      },
     );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Load more' }));
+
+    await waitFor(() => {
+      expect(mockedShowNotification).toHaveBeenLastCalledWith(
+        [{ info: { runUuid: 'new' } }],
+        [EXPERIMENT_RUNS_MOCK_STORE.entities.runInfosByUuid['experiment123456789_run1']],
+      );
+    });
   });
 });

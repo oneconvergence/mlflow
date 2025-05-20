@@ -1,5 +1,6 @@
 from mlflow.entities.model_registry._model_registry_entity import _ModelRegistryEntity
 from mlflow.entities.model_registry.model_version import ModelVersion
+from mlflow.entities.model_registry.prompt import IS_PROMPT_TAG_KEY
 from mlflow.entities.model_registry.registered_model_alias import RegisteredModelAlias
 from mlflow.entities.model_registry.registered_model_tag import RegisteredModelTag
 from mlflow.protos.model_registry_pb2 import RegisteredModel as ProtoRegisteredModel
@@ -49,7 +50,8 @@ class RegisteredModel(_ModelRegistryEntity):
     @property
     def last_updated_timestamp(self):
         """Integer. Timestamp of last update for this model version (milliseconds since the Unix
-        epoch)."""
+        epoch).
+        """
         return self._last_updated_timestamp
 
     @last_updated_timestamp.setter
@@ -68,7 +70,8 @@ class RegisteredModel(_ModelRegistryEntity):
     @property
     def latest_versions(self):
         """List of the latest :py:class:`mlflow.entities.model_registry.ModelVersion` instances
-        for each stage"""
+        for each stage.
+        """
         return self._latest_version
 
     @latest_versions.setter
@@ -78,7 +81,8 @@ class RegisteredModel(_ModelRegistryEntity):
     @property
     def tags(self):
         """Dictionary of tag key (string) -> tag value for the current registered model."""
-        return self._tags
+        # Remove the is_prompt tag as it should not be user-facing
+        return {k: v for k, v in self._tags.items() if k != IS_PROMPT_TAG_KEY}
 
     @property
     def aliases(self):

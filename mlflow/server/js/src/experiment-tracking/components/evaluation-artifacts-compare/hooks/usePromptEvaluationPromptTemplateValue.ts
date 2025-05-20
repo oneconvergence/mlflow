@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 
-import type { TextAreaRef } from 'antd/lib/input/TextArea';
+import type { TextAreaRef } from '@databricks/design-system';
 import {
   DEFAULT_PROMPTLAB_NEW_TEMPLATE_VALUE,
   extractPromptInputVariables,
@@ -17,11 +17,7 @@ const getNewVariableName = (alreadyExistingVariableNames: string[] = []) => {
   }
 
   const maximumVariableNameIndex =
-    max(
-      alreadyExistingVariableNames.map((name) =>
-        parseInt(name.match(/new_variable_(\d+)/)?.[1] || '1', 10),
-      ),
-    ) || 1;
+    max(alreadyExistingVariableNames.map((name) => parseInt(name.match(/new_variable_(\d+)/)?.[1] || '1', 10))) || 1;
 
   return `${newDefaultVariableName}_${maximumVariableNameIndex + 1}`;
 };

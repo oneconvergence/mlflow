@@ -1,12 +1,5 @@
-/**
- * NOTE: this code file was automatically migrated to TypeScript using ts-migrate and
- * may contain multiple `any` type annotations and `@ts-expect-error` directives.
- * If possible, please improve types while making changes to this file. If the type
- * annotations are already looking good, please remove this comment.
- */
-
 import React from 'react';
-import { shallow } from 'enzyme';
+import { renderWithIntl, screen } from '@mlflow/mlflow/src/common/utils/TestUtils.react18';
 import { CreateExperimentForm } from './CreateExperimentForm';
 
 describe('Render test', () => {
@@ -17,7 +10,16 @@ describe('Render test', () => {
   };
 
   it('should render with minimal props without exploding', () => {
-    const wrapper = shallow(<CreateExperimentForm {...minimalProps} />);
-    expect(wrapper.length).toBe(1);
+    renderWithIntl(<CreateExperimentForm {...minimalProps} />);
+    expect(
+      screen.getByRole('textbox', {
+        name: /experiment name/i,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('textbox', {
+        name: /artifact location/i,
+      }),
+    ).toBeInTheDocument();
   });
 });

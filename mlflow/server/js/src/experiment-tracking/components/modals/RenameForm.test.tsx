@@ -1,13 +1,7 @@
-/**
- * NOTE: this code file was automatically migrated to TypeScript using ts-migrate and
- * may contain multiple `any` type annotations and `@ts-expect-error` directives.
- * If possible, please improve types while making changes to this file. If the type
- * annotations are already looking good, please remove this comment.
- */
-
 import React from 'react';
-import { shallow } from 'enzyme';
+import { renderWithIntl, screen } from '@mlflow/mlflow/src/common/utils/TestUtils.react18';
 import { RenameForm } from './RenameForm';
+import { identity } from 'lodash';
 
 describe('Render test', () => {
   const minimalProps = {
@@ -15,12 +9,12 @@ describe('Render test', () => {
     name: 'Test',
     visible: true,
     // eslint-disable-next-line no-unused-vars
-    form: { getFieldDecorator: jest.fn((opts) => (c: any) => c) },
+    form: { getFieldDecorator: jest.fn(() => identity) },
+    innerRef: {},
   };
 
   it('should render with minimal props without exploding', () => {
-    // @ts-expect-error TS(2769): No overload matches this call.
-    const wrapper = shallow(<RenameForm {...minimalProps} />);
-    expect(wrapper.length).toBe(1);
+    renderWithIntl(<RenameForm {...minimalProps} />);
+    expect(screen.getByTestId('rename-modal-input')).toBeInTheDocument();
   });
 });

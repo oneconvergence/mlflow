@@ -277,7 +277,8 @@ class TrainStep(BaseStep):
             frame = sys._getframe(stacklevel)
             filename = frame.f_code.co_filename
             lineno = frame.f_lineno
-            message = f"{timestamp} {filename}:{lineno}: {args[0]}\n"
+            original_message = args[0] if len(args) > 0 else kwargs.get("message", "")
+            message = f"{timestamp} {filename}:{lineno}: {original_message}\n"
             with open(os.path.join(output_directory, "warning_logs.txt"), "a") as f:
                 f.write(message)
 
@@ -787,9 +788,7 @@ class TrainStep(BaseStep):
                 columns=["Model Rank", *metric_columns, "Run Time", "Run ID"],
             )
             .apply(
-                lambda s: s.map(lambda x: f"{x:.6g}")  # pylint: disable=unnecessary-lambda
-                if s.name in metric_names
-                else s,  # pylint: disable=unnecessary-lambda
+                lambda s: s.map(lambda x: f"{x:.6g}") if s.name in metric_names else s,
                 axis=0,
             )
             .set_axis(["Latest"] + top_leaderboard_item_index_values, axis="index")

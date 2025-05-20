@@ -2,17 +2,21 @@ from unittest import mock
 
 import pytest
 from aiohttp import ClientTimeout
-from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
 from pydantic import ValidationError
 
 from mlflow.exceptions import MlflowException
 from mlflow.gateway.config import OpenAIConfig, RouteConfig
 from mlflow.gateway.constants import MLFLOW_GATEWAY_ROUTE_TIMEOUT_SECONDS
+from mlflow.gateway.exceptions import AIGatewayException
 from mlflow.gateway.providers.openai import OpenAIProvider
 from mlflow.gateway.schemas import chat, completions, embeddings
 
-from tests.gateway.tools import MockAsyncResponse, mock_http_client
+from tests.gateway.tools import (
+    MockAsyncResponse,
+    MockAsyncStreamingResponse,
+    mock_http_client,
+)
 
 
 def chat_config():
@@ -21,7 +25,7 @@ def chat_config():
         "route_type": "llm/v1/chat",
         "model": {
             "provider": "openai",
-            "name": "gpt-3.5-turbo",
+            "name": "gpt-4o-mini",
             "config": {
                 "openai_api_base": "https://api.openai.com/v1",
                 "openai_api_key": "key",
@@ -35,7 +39,7 @@ def chat_response():
         "id": "chatcmpl-abc123",
         "object": "chat.completion",
         "created": 1677858242,
-        "model": "gpt-3.5-turbo-0301",
+        "model": "gpt-4o-mini",
         "usage": {
             "prompt_tokens": 13,
             "completion_tokens": 7,
@@ -69,12 +73,14 @@ async def test_chat():
             "id": "chatcmpl-abc123",
             "object": "chat.completion",
             "created": 1677858242,
-            "model": "gpt-3.5-turbo-0301",
+            "model": "gpt-4o-mini",
             "choices": [
                 {
                     "message": {
                         "role": "assistant",
                         "content": "\n\nThis is a test!",
+                        "tool_calls": None,
+                        "refusal": None,
                     },
                     "finish_reason": "stop",
                     "index": 0,
@@ -94,8 +100,103 @@ async def test_chat():
         mock_client.post.assert_called_once_with(
             "https://api.openai.com/v1/chat/completions",
             json={
-                "model": "gpt-3.5-turbo",
+                "model": "gpt-4o-mini",
                 "temperature": 0.5,
+                "n": 1,
+                **payload,
+            },
+            timeout=ClientTimeout(total=MLFLOW_GATEWAY_ROUTE_TIMEOUT_SECONDS),
+        )
+
+
+def chat_stream_response():
+    return [
+        b'data: {"id":"test-id","object":"chat.completion.chunk","created":1,"model":"test",'
+        b'"choices":[{"index":0,"finish_reason":null,"delta":{"role":"assistant"}}]}\n',
+        b"\n",
+        b'data: {"id":"test-id","object":"chat.completion.chunk","created":1,"model":"test",'
+        b'"choices":[{"index":0,"finish_reason":null,"delta":{"content":"test"}}]}\n',
+        b"\n",
+        b'data: {"id":"test-id","object":"chat.completion.chunk","created":1,"model":"test",'
+        b'"choices":[{"index":0,"finish_reason":"stop","delta":{}}]}\n',
+        b"\n",
+        b"data: [DONE]\n",
+    ]
+
+
+def chat_stream_response_incomplete():
+    return [
+        # contains first half of a chunk
+        b'data: {"id":"test-id","object":"chat.completion.chunk","created":1,"model":"test","choi'
+        # contains second half of first chunk and first half of second chunk
+        b'ces":[{"index":0,"finish_reason":null,"delta":{"role":"assistant"}}]}\n\n'
+        b'data: {"id":"test-id","object":"chat.completion.chunk","created":1,"model":"te',
+        # contains second half of second chunk
+        b'st","choices":[{"index":0,"finish_reason":null,"delta":{"content":"test"}}]}\n',
+        b"\n",
+        b'data: {"id":"test-id","object":"chat.completion.chunk","created":1,"model":"test",'
+        b'"choices":[{"index":0,"finish_reason":"stop","delta":{}}]}\n',
+        b"\n",
+        b"data: [DONE]\n",
+    ]
+
+
+@pytest.mark.parametrize("resp", [chat_stream_response(), chat_stream_response_incomplete()])
+@pytest.mark.asyncio
+async def test_chat_stream(resp):
+    config = chat_config()
+    mock_client = mock_http_client(MockAsyncStreamingResponse(resp))
+
+    with mock.patch("aiohttp.ClientSession", return_value=mock_client) as mock_build_client:
+        provider = OpenAIProvider(RouteConfig(**config))
+        payload = {"messages": [{"role": "user", "content": "Tell me a joke"}]}
+        response = provider.chat_stream(chat.RequestPayload(**payload))
+
+        chunks = [jsonable_encoder(chunk) async for chunk in response]
+        assert chunks == [
+            {
+                "choices": [
+                    {
+                        "delta": {"content": None, "role": "assistant"},
+                        "finish_reason": None,
+                        "index": 0,
+                    }
+                ],
+                "created": 1,
+                "id": "test-id",
+                "model": "test",
+                "object": "chat.completion.chunk",
+            },
+            {
+                "choices": [
+                    {"delta": {"content": "test", "role": None}, "finish_reason": None, "index": 0}
+                ],
+                "created": 1,
+                "id": "test-id",
+                "model": "test",
+                "object": "chat.completion.chunk",
+            },
+            {
+                "choices": [
+                    {"delta": {"content": None, "role": None}, "finish_reason": "stop", "index": 0}
+                ],
+                "created": 1,
+                "id": "test-id",
+                "model": "test",
+                "object": "chat.completion.chunk",
+            },
+        ]
+
+        mock_build_client.assert_called_once_with(
+            headers={
+                "Authorization": "Bearer key",
+            }
+        )
+        mock_client.post.assert_called_once_with(
+            "https://api.openai.com/v1/chat/completions",
+            json={
+                "model": "gpt-4o-mini",
+                "temperature": 0,
                 "n": 1,
                 **payload,
             },
@@ -134,7 +235,7 @@ async def test_completions():
             "id": "chatcmpl-abc123",
             "object": "text_completion",
             "created": 1677858242,
-            "model": "gpt-3.5-turbo-0301",
+            "model": "gpt-4o-mini",
             "choices": [{"text": "\n\nThis is a test!", "index": 0, "finish_reason": "stop"}],
             "usage": {"prompt_tokens": 13, "completion_tokens": 7, "total_tokens": 20},
         }
@@ -164,6 +265,115 @@ async def test_completions_throws_if_prompt_contains_non_string(prompt):
     payload = {"prompt": prompt}
     with pytest.raises(ValidationError, match=r"prompt"):
         await provider.completions(completions.RequestPayload(**payload))
+
+
+def completions_stream_response():
+    return [
+        b'data: {"id":"test-id","object":"chat.completion.chunk","created":1,"model":"test",'
+        b'"choices":[{"index":0,"finish_reason":null,'
+        b'"delta":{"role":"assistant", "content": ""}}]}\n',
+        b"\n",
+        b'data: {"id":"test-id","object":"chat.completion.chunk","created":1,"model":"test",'
+        b'"choices":[{"index":0,"finish_reason":null,'
+        b'"delta":{"content":"test"}}]}\n',
+        b"\n",
+        b'data: {"id":"test-id","object":"chat.completion.chunk","created":1,"model":"test",'
+        b'"choices":[{"index":0,"finish_reason":"length","delta":{}}]}\n',
+        b"\n",
+        b"data: [DONE]\n",
+    ]
+
+
+def completions_stream_response_incomplete():
+    return [
+        # contains first half of a chunk
+        b'data: {"id":"test-id","object":"chat.completion.chunk","created":1,"model":"test","choi',
+        # contains second half of first chunk and first half of second chunk
+        b'ces":[{"index":0,"finish_reason":null,"delta":{"role":"assistant", '
+        b'"content": ""}}]}\n\ndata: {"id":"test-id","object":"chat.comp',
+        # contains second half of second chunk
+        b'letion.chunk","created":1,"model":"test","choices":[{"index":0,"finish_reason":null,'
+        b'"delta":{"content":"test"}}]}\n',
+        b"\n",
+        b'data: {"id":"test-id","object":"chat.completion.chunk","created":1,"model":"test",'
+        b'"choices":[{"index":0,"finish_reason":"length","delta":{}}]}\n',
+        b"\n",
+        b"data: [DONE]\n",
+    ]
+
+
+@pytest.mark.parametrize(
+    "resp", [completions_stream_response(), completions_stream_response_incomplete()]
+)
+@pytest.mark.asyncio
+async def test_completions_stream(resp):
+    config = completions_config()
+    mock_client = mock_http_client(MockAsyncStreamingResponse(resp))
+
+    with mock.patch("aiohttp.ClientSession", return_value=mock_client) as mock_build_client:
+        provider = OpenAIProvider(RouteConfig(**config))
+        payload = {"prompt": "This is a test"}
+        response = provider.completions_stream(completions.RequestPayload(**payload))
+
+        chunks = [jsonable_encoder(chunk) async for chunk in response]
+        assert chunks == [
+            {
+                "choices": [
+                    {
+                        "text": "",
+                        "finish_reason": None,
+                        "index": 0,
+                    }
+                ],
+                "created": 1,
+                "id": "test-id",
+                "model": "test",
+                "object": "text_completion_chunk",
+            },
+            {
+                "choices": [
+                    {
+                        "text": "test",
+                        "finish_reason": None,
+                        "index": 0,
+                    }
+                ],
+                "created": 1,
+                "id": "test-id",
+                "model": "test",
+                "object": "text_completion_chunk",
+            },
+            {
+                "choices": [
+                    {
+                        "text": None,
+                        "finish_reason": "length",
+                        "index": 0,
+                    }
+                ],
+                "created": 1,
+                "id": "test-id",
+                "model": "test",
+                "object": "text_completion_chunk",
+            },
+        ]
+
+        mock_build_client.assert_called_once_with(
+            headers={
+                "Authorization": "Bearer key",
+                "OpenAI-Organization": "test-organization",
+            }
+        )
+        mock_client.post.assert_called_once_with(
+            "https://api.openai.com/v1/chat/completions",
+            json={
+                "model": "gpt-4-32k",
+                "temperature": 0,
+                "n": 1,
+                "messages": [{"role": "user", "content": "This is a test"}],
+            },
+            timeout=ClientTimeout(total=MLFLOW_GATEWAY_ROUTE_TIMEOUT_SECONDS),
+        )
 
 
 def embedding_config():
@@ -316,7 +526,7 @@ def azure_config(api_type: str):
         "route_type": "llm/v1/completions",
         "model": {
             "provider": "openai",
-            "name": "gpt-35-turbo",
+            "name": "gpt-4o-mini",
             "config": {
                 "openai_api_type": api_type,
                 "openai_api_key": "key",
@@ -344,7 +554,7 @@ async def test_azure_openai():
             "id": "chatcmpl-abc123",
             "object": "text_completion",
             "created": 1677858242,
-            "model": "gpt-3.5-turbo-0301",
+            "model": "gpt-4o-mini",
             "choices": [{"text": "\n\nThis is a test!", "index": 0, "finish_reason": "stop"}],
             "usage": {"prompt_tokens": 13, "completion_tokens": 7, "total_tokens": 20},
         }
@@ -383,7 +593,7 @@ async def test_azuread_openai():
             "id": "chatcmpl-abc123",
             "object": "text_completion",
             "created": 1677858242,
-            "model": "gpt-3.5-turbo-0301",
+            "model": "gpt-4o-mini",
             "choices": [{"text": "\n\nThis is a test!", "index": 0, "finish_reason": "stop"}],
             "usage": {"prompt_tokens": 13, "completion_tokens": 7, "total_tokens": 20},
         }
@@ -497,7 +707,7 @@ async def test_param_model_is_not_permitted():
         "max_tokens": 5000,
         "model": "something-else",
     }
-    with pytest.raises(HTTPException, match=r".*") as e:
+    with pytest.raises(AIGatewayException, match=r".*") as e:
         await provider.completions(completions.RequestPayload(**payload))
     assert "The parameter 'model' is not permitted" in e.value.detail
     assert e.value.status_code == 422

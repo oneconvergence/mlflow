@@ -1,10 +1,9 @@
 import warnings
-from abc import ABCMeta, abstractmethod
-
-import entrypoints
+from abc import ABCMeta
 
 from mlflow.exceptions import MlflowException
 from mlflow.protos.databricks_pb2 import INVALID_PARAMETER_VALUE
+from mlflow.utils.plugins import get_entry_points
 from mlflow.utils.uri import get_uri_scheme
 
 
@@ -23,7 +22,7 @@ class UnsupportedModelRegistryStoreURIException(MlflowException):
         self.supported_uri_schemes = supported_uri_schemes
 
 
-class StoreRegistry(metaclass=ABCMeta):
+class StoreRegistry:
     """
     Abstract class defining a scheme-based registry for store implementations.
 
@@ -38,7 +37,8 @@ class StoreRegistry(metaclass=ABCMeta):
     arguments passed to the `get_store` method.
     """
 
-    @abstractmethod
+    __metaclass__ = ABCMeta
+
     def __init__(self, group_name):
         self._registry = {}
         self.group_name = group_name
@@ -48,7 +48,7 @@ class StoreRegistry(metaclass=ABCMeta):
 
     def register_entrypoints(self):
         """Register tracking stores provided by other packages"""
-        for entrypoint in entrypoints.get_group_all(self.group_name):
+        for entrypoint in get_entry_points(self.group_name):
             try:
                 self.register(entrypoint.name, entrypoint.load())
             except (AttributeError, ImportError) as exc:
@@ -62,15 +62,20 @@ class StoreRegistry(metaclass=ABCMeta):
     def get_store_builder(self, store_uri):
         """Get a store from the registry based on the scheme of store_uri
 
-        :param store_uri: The store URI. If None, it will be inferred from the environment. This
-                          URI is used to select which tracking store implementation to instantiate
-                          and is passed to the constructor of the implementation.
-        :return: A function that returns an instance of
-                 ``mlflow.store.{tracking|model_registry}.AbstractStore`` that fulfills the store
-                  URI requirements.
+        Args:
+            store_uri: The store URI. If None, it will be inferred from the environment. This
+                URI is used to select which tracking store implementation to instantiate
+                and is passed to the constructor of the implementation.
+
+        Returns:
+            A function that returns an instance of
+            ``mlflow.store.{tracking|model_registry}.AbstractStore`` that fulfills the store
+            URI requirements.
         """
         scheme = (
-            store_uri if store_uri in {"databricks", "databricks-uc"} else get_uri_scheme(store_uri)
+            store_uri
+            if store_uri in {"databricks", "databricks-uc", "uc"}
+            else get_uri_scheme(store_uri)
         )
         try:
             store_builder = self._registry[scheme]

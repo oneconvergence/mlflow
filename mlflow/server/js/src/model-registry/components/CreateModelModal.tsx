@@ -28,7 +28,7 @@ type Props = WithRouterNextProps & {
   intl: IntlShape;
 };
 
-export class CreateModelModalImpl extends React.Component<Props> {
+class CreateModelModalImpl extends React.Component<Props> {
   createRegisteredModelRequestId = getUUID();
 
   handleCreateRegisteredModel = async (values: any) => {
@@ -48,7 +48,7 @@ export class CreateModelModalImpl extends React.Component<Props> {
 
   handleOnCancel = () => {
     if (this.props.navigateBackOnCancel) {
-      this.props.navigate(-1);
+      this.props.navigate(ModelRegistryRoutes.modelListPageRoute);
     }
   };
 
@@ -88,7 +88,4 @@ const CreateModelModalWithRouter = withRouterNext(
   connect(undefined, mapDispatchToProps)(injectIntl<'intl', Props>(CreateModelModalImpl)),
 );
 
-export const CreateModelModal = withErrorBoundary(
-  ErrorUtils.mlflowServices.MODEL_REGISTRY,
-  CreateModelModalWithRouter,
-);
+export const CreateModelModal = withErrorBoundary(ErrorUtils.mlflowServices.MODEL_REGISTRY, CreateModelModalWithRouter);

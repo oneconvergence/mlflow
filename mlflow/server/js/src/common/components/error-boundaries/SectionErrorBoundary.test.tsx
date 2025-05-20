@@ -6,38 +6,48 @@
  */
 
 import React from 'react';
-import { shallow } from 'enzyme';
+import { renderWithIntl, screen } from '@mlflow/mlflow/src/common/utils/TestUtils.react18';
 import { SectionErrorBoundary } from './SectionErrorBoundary';
 import { SupportPageUrl } from '../../constants';
 
 describe('SectionErrorBoundary', () => {
-  let wrapper: any;
   let minimalProps: any;
 
   beforeEach(() => {
     minimalProps = { children: 'testChild' };
-    wrapper = shallow(<SectionErrorBoundary {...minimalProps} />);
   });
 
   test('should render with minimal props without exploding', () => {
-    expect(wrapper.text()).toEqual('testChild');
-    expect(wrapper.find('i.icon-fail').length).toBe(0);
+    renderWithIntl(<SectionErrorBoundary {...minimalProps} />);
+    expect(screen.getByText('testChild')).toBeInTheDocument();
+    expect(screen.queryByTestId('icon-fail')).not.toBeInTheDocument();
   });
 
   test('test componentDidCatch causes error message to render', () => {
-    const instance = wrapper.instance();
-    instance.componentDidCatch('testError', 'testInfo');
-    instance.forceUpdate();
-    expect(wrapper.find('i.icon-fail').length).toBe(1);
-    expect(wrapper.text()).not.toMatch('testChild');
-    expect(wrapper.find({ href: SupportPageUrl }).length).toBe(1);
+    const ErrorComponent = () => {
+      throw new Error('error msg');
+    };
+    renderWithIntl(
+      <SectionErrorBoundary {...minimalProps}>
+        <ErrorComponent />{' '}
+      </SectionErrorBoundary>,
+    );
+
+    expect(screen.getByTestId('icon-fail')).toBeInTheDocument();
+    expect(screen.queryByText('testChild')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /here/i })).toHaveAttribute('href', SupportPageUrl);
   });
 
   test('should show error if showServerError prop passed in', () => {
-    const withShowServerError = shallow(<SectionErrorBoundary {...minimalProps} showServerError />);
-    const instance = withShowServerError.instance();
-    instance.componentDidCatch(new Error('some error message'));
-    instance.forceUpdate();
-    expect(withShowServerError.text()).toContain('some error message');
+    const ErrorComponent = () => {
+      throw new Error('some error message');
+    };
+    renderWithIntl(
+      <SectionErrorBoundary {...minimalProps} showServerError>
+        <ErrorComponent />{' '}
+      </SectionErrorBoundary>,
+    );
+
+    expect(screen.getByText(/error message: some error message/i));
   });
 });

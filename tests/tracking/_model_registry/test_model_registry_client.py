@@ -109,7 +109,6 @@ def test_rename_registered_model(mock_store):
 
 
 def test_update_registered_model_validation_errors_on_empty_new_name(mock_store):
-    # pylint: disable=unused-argument
     with pytest.raises(MlflowException, match="The name must not be an empty string"):
         newModelRegistryClient().rename_registered_model("Model 1", " ")
 
@@ -124,8 +123,9 @@ def test_search_registered_models(mock_store):
         [RegisteredModel("Model 1"), RegisteredModel("Model 2")], ""
     )
     result = newModelRegistryClient().search_registered_models(filter_string="test filter")
+    prompt_filter = "tag.`mlflow.prompt.is_prompt` != 'true'"
     mock_store.search_registered_models.assert_called_with(
-        "test filter", SEARCH_REGISTERED_MODEL_MAX_RESULTS_DEFAULT, None, None
+        f"test filter AND {prompt_filter}", SEARCH_REGISTERED_MODEL_MAX_RESULTS_DEFAULT, None, None
     )
     assert len(result) == 2
     assert result.token == ""
@@ -137,7 +137,7 @@ def test_search_registered_models(mock_store):
         page_token="next one",
     )
     mock_store.search_registered_models.assert_called_with(
-        "another filter", 12, ["A", "B DESC"], "next one"
+        f"another filter AND {prompt_filter}", 12, ["A", "B DESC"], "next one"
     )
     assert len(result) == 2
     assert result.token == ""
@@ -147,7 +147,7 @@ def test_search_registered_models(mock_store):
         "page 2 token",
     )
     result = newModelRegistryClient().search_registered_models(max_results=5)
-    mock_store.search_registered_models.assert_called_with(None, 5, None, None)
+    mock_store.search_registered_models.assert_called_with(prompt_filter, 5, None, None)
     assert [rm.name for rm in result] == ["model A", "Model zz", "Model b"]
     assert result.token == "page 2 token"
 
@@ -303,11 +303,11 @@ def test_update_model_version(mock_store):
     description = "new description"
     expected_result = ModelVersion(name, version, creation_timestamp=123, description=description)
     mock_store.update_model_version.return_value = expected_result
-    actal_result = newModelRegistryClient().update_model_version(name, version, "new description")
+    actual_result = newModelRegistryClient().update_model_version(name, version, "new description")
     mock_store.update_model_version.assert_called_once_with(
         name=name, version=version, description="new description"
     )
-    assert expected_result == actal_result
+    assert expected_result == actual_result
 
 
 def test_transition_model_version_stage(mock_store):
@@ -324,7 +324,6 @@ def test_transition_model_version_stage(mock_store):
 
 
 def test_transition_model_version_stage_validation_errors(mock_store):
-    # pylint: disable=unused-argument
     with pytest.raises(MlflowException, match="The stage must not be an empty string"):
         newModelRegistryClient().transition_model_version_stage("Model 1", "12", stage=" ")
 

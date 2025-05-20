@@ -1,23 +1,24 @@
 import time
-from typing import Any, Dict
-
-from fastapi import HTTPException
-from fastapi.encoders import jsonable_encoder
+from typing import Any
 
 from mlflow.gateway.config import PaLMConfig, RouteConfig
+from mlflow.gateway.exceptions import AIGatewayException
 from mlflow.gateway.providers.base import BaseProvider
 from mlflow.gateway.providers.utils import rename_payload_keys, send_request
 from mlflow.gateway.schemas import chat, completions, embeddings
 
 
 class PaLMProvider(BaseProvider):
+    NAME = "PaLM"
+    CONFIG_TYPE = PaLMConfig
+
     def __init__(self, config: RouteConfig) -> None:
         super().__init__(config)
         if config.model.config is None or not isinstance(config.model.config, PaLMConfig):
             raise TypeError(f"Unexpected config type {config.model.config}")
         self.palm_config: PaLMConfig = config.model.config
 
-    async def _request(self, path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    async def _request(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         headers = {"x-goog-api-key": self.palm_config.palm_api_key}
         return await send_request(
             headers=headers,
@@ -27,10 +28,12 @@ class PaLMProvider(BaseProvider):
         )
 
     async def chat(self, payload: chat.RequestPayload) -> chat.ResponsePayload:
+        from fastapi.encoders import jsonable_encoder
+
         payload = jsonable_encoder(payload, exclude_none=True)
         self.check_for_model_field(payload)
         if "max_tokens" in payload or "maxOutputTokens" in payload:
-            raise HTTPException(
+            raise AIGatewayException(
                 status_code=422, detail="Max tokens is not supported for PaLM chat."
             )
         key_mapping = {
@@ -39,7 +42,7 @@ class PaLMProvider(BaseProvider):
         }
         for k1, k2 in key_mapping.items():
             if k2 in payload:
-                raise HTTPException(
+                raise AIGatewayException(
                     status_code=422, detail=f"Invalid parameter {k2}. Use {k1} instead."
                 )
         payload = rename_payload_keys(payload, key_mapping)
@@ -100,6 +103,8 @@ class PaLMProvider(BaseProvider):
         )
 
     async def completions(self, payload: completions.RequestPayload) -> completions.ResponsePayload:
+        from fastapi.encoders import jsonable_encoder
+
         payload = jsonable_encoder(payload, exclude_none=True)
         self.check_for_model_field(payload)
         key_mapping = {
@@ -109,7 +114,7 @@ class PaLMProvider(BaseProvider):
         }
         for k1, k2 in key_mapping.items():
             if k2 in payload:
-                raise HTTPException(
+                raise AIGatewayException(
                     status_code=422, detail=f"Invalid parameter {k2}. Use {k1} instead."
                 )
         payload = rename_payload_keys(payload, key_mapping)
@@ -161,6 +166,8 @@ class PaLMProvider(BaseProvider):
         )
 
     async def embeddings(self, payload: embeddings.RequestPayload) -> embeddings.ResponsePayload:
+        from fastapi.encoders import jsonable_encoder
+
         payload = jsonable_encoder(payload, exclude_none=True)
         self.check_for_model_field(payload)
         key_mapping = {
@@ -168,7 +175,7 @@ class PaLMProvider(BaseProvider):
         }
         for k1, k2 in key_mapping.items():
             if k2 in payload:
-                raise HTTPException(
+                raise AIGatewayException(
                     status_code=422, detail=f"Invalid parameter {k2}. Use {k1} instead."
                 )
         payload = rename_payload_keys(payload, key_mapping)

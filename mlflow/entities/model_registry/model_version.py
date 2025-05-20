@@ -65,7 +65,8 @@ class ModelVersion(_ModelRegistryEntity):
     @property
     def last_updated_timestamp(self):
         """Integer. Timestamp of last update for this model version (milliseconds since the Unix
-        epoch)."""
+        epoch).
+        """
         return self._last_updated_timestamp
 
     @last_updated_timestamp.setter
@@ -152,13 +153,13 @@ class ModelVersion(_ModelRegistryEntity):
             proto.version,
             proto.creation_timestamp,
             proto.last_updated_timestamp,
-            proto.description,
+            proto.description if proto.HasField("description") else None,
             proto.user_id,
             proto.current_stage,
             proto.source,
-            proto.run_id,
+            proto.run_id if proto.HasField("run_id") else None,
             ModelVersionStatus.to_string(proto.status),
-            proto.status_message,
+            proto.status_message if proto.HasField("status_message") else None,
             run_link=proto.run_link,
             aliases=proto.aliases,
         )

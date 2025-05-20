@@ -5,9 +5,8 @@
  * annotations are already looking good, please remove this comment.
  */
 
-// @ts-expect-error TS(7016): Could not find a declaration file for module 'date... Remove this comment to see the full error message
-import dateFormat from 'dateformat';
 import React from 'react';
+import moment from 'moment';
 import notebookSvg from '../static/notebook.svg';
 import revisionSvg from '../static/revision.svg';
 import emptySvg from '../static/empty.svg';
@@ -18,9 +17,11 @@ import qs from 'qs';
 import { MLFLOW_INTERNAL_PREFIX } from './TagUtils';
 import _ from 'lodash';
 import { ErrorCodes, SupportPageUrl } from '../constants';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, IntlShape } from 'react-intl';
 import { ErrorWrapper } from './ErrorWrapper';
-import { shouldUsePathRouting } from './FeatureUtils';
+import { KeyValueEntity, RunInfoEntity } from '../../experiment-tracking/types';
+import { FileCodeIcon, FolderBranchIcon, NotebookIcon, WorkflowsIcon } from '@databricks/design-system';
+import { NOTE_CONTENT_TAG } from '../../experiment-tracking/utils/NoteUtils';
 
 class Utils {
   /**
@@ -62,11 +63,21 @@ class Utils {
   /**
    * Displays the error notification in the UI.
    */
-  static displayGlobalErrorNotification(content: any, duration: any) {
+  static displayGlobalErrorNotification(content: any, duration?: any) {
     if (!Utils.#notificationsApi) {
       return;
     }
     (Utils.#notificationsApi as any).error({ message: content, duration: duration });
+  }
+
+  /**
+   * Displays the info notification in the UI.
+   */
+  static displayGlobalInfoNotification(content: any, duration?: any) {
+    if (!Utils.#notificationsApi) {
+      return;
+    }
+    (Utils.#notificationsApi as any).info({ message: content, duration: duration });
   }
 
   static runNameTag = 'mlflow.runName';
@@ -124,13 +135,22 @@ class Utils {
   /**
    * Format timestamps from millisecond epoch time.
    */
-  static formatTimestamp(timestamp: any, format = 'yyyy-mm-dd HH:MM:ss') {
-    if (timestamp === undefined) {
-      return '(unknown)';
-    }
+  static formatTimestamp(timestamp: any, intl?: IntlShape) {
     const d = new Date(0);
     d.setUTCMilliseconds(timestamp);
-    return dateFormat(d, format);
+
+    // Need to update here when the original shared code is updated: https://github.com/databricks-eng/universe/blob/master/js/packages/web-shared/src/date-time/DateTimeFormats.ts#L37
+    if (intl) {
+      return intl.formatDate(d, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    }
+    return moment(d).format('YYYY-MM-DD HH:mm:ss');
   }
 
   static timeSinceStr(date: any, referenceDate = new Date()) {
@@ -141,8 +161,8 @@ class Utils {
     if (interval >= 1) {
       return (
         <FormattedMessage
-          defaultMessage='{timeSince, plural, =1 {1 year} other {# years}} ago'
-          description='Text for time in years since given date for MLflow views'
+          defaultMessage="{timeSince, plural, =1 {1 year} other {# years}} ago"
+          description="Text for time in years since given date for MLflow views"
           values={{ timeSince: interval }}
         />
       );
@@ -151,8 +171,8 @@ class Utils {
     if (interval >= 1) {
       return (
         <FormattedMessage
-          defaultMessage='{timeSince, plural, =1 {1 month} other {# months}} ago'
-          description='Text for time in months since given date for MLflow views'
+          defaultMessage="{timeSince, plural, =1 {1 month} other {# months}} ago"
+          description="Text for time in months since given date for MLflow views"
           values={{ timeSince: interval }}
         />
       );
@@ -161,8 +181,8 @@ class Utils {
     if (interval >= 1) {
       return (
         <FormattedMessage
-          defaultMessage='{timeSince, plural, =1 {1 day} other {# days}} ago'
-          description='Text for time in days since given date for MLflow views'
+          defaultMessage="{timeSince, plural, =1 {1 day} other {# days}} ago"
+          description="Text for time in days since given date for MLflow views"
           values={{ timeSince: interval }}
         />
       );
@@ -171,8 +191,8 @@ class Utils {
     if (interval >= 1) {
       return (
         <FormattedMessage
-          defaultMessage='{timeSince, plural, =1 {1 hour} other {# hours}} ago'
-          description='Text for time in hours since given date for MLflow views'
+          defaultMessage="{timeSince, plural, =1 {1 hour} other {# hours}} ago"
+          description="Text for time in hours since given date for MLflow views"
           values={{ timeSince: interval }}
         />
       );
@@ -181,16 +201,16 @@ class Utils {
     if (interval >= 1) {
       return (
         <FormattedMessage
-          defaultMessage='{timeSince, plural, =1 {1 minute} other {# minutes}} ago'
-          description='Text for time in minutes since given date for MLflow views'
+          defaultMessage="{timeSince, plural, =1 {1 minute} other {# minutes}} ago"
+          description="Text for time in minutes since given date for MLflow views"
           values={{ timeSince: interval }}
         />
       );
     }
     return (
       <FormattedMessage
-        defaultMessage='{timeSince, plural, =1 {1 second} other {# seconds}} ago'
-        description='Text for time in seconds since given date for MLflow views'
+        defaultMessage="{timeSince, plural, =1 {1 second} other {# seconds}} ago"
+        description="Text for time in seconds since given date for MLflow views"
         values={{ timeSince: seconds }}
       />
     );
@@ -221,8 +241,11 @@ class Utils {
    * @param startTime in milliseconds
    * @param endTime in milliseconds
    */
-  static getDuration(startTime: any, endTime: any) {
-    return startTime && endTime ? Utils.formatDuration(endTime - startTime) : null;
+  static getDuration(startTime?: number | string | null, endTime?: number | string | null) {
+    if (!Number(startTime) || !Number(endTime)) {
+      return null;
+    }
+    return Utils.formatDuration(Number(endTime) - Number(startTime));
   }
 
   static baseName(path: any) {
@@ -271,7 +294,7 @@ class Utils {
     return /(.*?[@/][^?]*git.*?)[:/]([^#]+)(?:#(.*))?/;
   }
 
-  static getGitRepoUrl(sourceName: any) {
+  static getGitRepoUrl(sourceName: any, branchName = 'master') {
     const gitHubMatch = sourceName.match(Utils.getGitHubRegex());
     const gitLabMatch = sourceName.match(Utils.getGitLabRegex());
     const bitbucketMatch = sourceName.match(Utils.getBitbucketRegex());
@@ -280,23 +303,23 @@ class Utils {
     if (gitHubMatch) {
       url = `https://github.com/${gitHubMatch[1]}/${gitHubMatch[2].replace(/.git/, '')}`;
       if (gitHubMatch[3]) {
-        url += `/tree/master/${gitHubMatch[3]}`;
+        url += `/tree/${branchName}/${gitHubMatch[3]}`;
       }
     } else if (gitLabMatch) {
       url = `https://gitlab.com/${gitLabMatch[1]}/${gitLabMatch[2].replace(/.git/, '')}`;
       if (gitLabMatch[3]) {
-        url += `/-/tree/master/${gitLabMatch[3]}`;
+        url += `/-/tree/${branchName}/${gitLabMatch[3]}`;
       }
     } else if (bitbucketMatch) {
       url = `https://bitbucket.org/${bitbucketMatch[1]}/${bitbucketMatch[2].replace(/.git/, '')}`;
       if (bitbucketMatch[3]) {
-        url += `/src/master/${bitbucketMatch[3]}`;
+        url += `/src/${branchName}/${bitbucketMatch[3]}`;
       }
     } else if (gitMatch) {
       const [, baseUrl, repoDir, fileDir] = gitMatch;
       url = baseUrl.replace(/git@/, 'https://') + '/' + repoDir.replace(/.git/, '');
       if (fileDir) {
-        url += `/tree/master/${fileDir}`;
+        url += `/tree/${branchName}/${fileDir}`;
       }
     }
     return url;
@@ -309,11 +332,17 @@ class Utils {
     const gitMatch = sourceName.match(Utils.getGitRegex());
     let url = null;
     if (gitHubMatch) {
-      url = `https://github.com/${gitHubMatch[1]}/${gitHubMatch[2].replace(/.git/, '')}/tree/${sourceVersion}/${gitHubMatch[3]}`;
+      url = `https://github.com/${gitHubMatch[1]}/${gitHubMatch[2].replace(/.git/, '')}/tree/${sourceVersion}/${
+        gitHubMatch[3]
+      }`;
     } else if (gitLabMatch) {
-      url = `https://gitlab.com/${gitLabMatch[1]}/${gitLabMatch[2].replace(/.git/, '')}/-/tree/${sourceVersion}/${gitLabMatch[3]}`;
+      url = `https://gitlab.com/${gitLabMatch[1]}/${gitLabMatch[2].replace(/.git/, '')}/-/tree/${sourceVersion}/${
+        gitLabMatch[3]
+      }`;
     } else if (bitbucketMatch) {
-      url = `https://bitbucket.org/${bitbucketMatch[1]}/${bitbucketMatch[2].replace(/.git/, '')}/src/${sourceVersion}/${bitbucketMatch[3]}`;
+      url = `https://bitbucket.org/${bitbucketMatch[1]}/${bitbucketMatch[2].replace(/.git/, '')}/src/${sourceVersion}/${
+        bitbucketMatch[3]
+      }`;
     } else if (gitMatch) {
       const [, baseUrl, repoDir, fileDir] = gitMatch;
       url = `${baseUrl.replace(/git@/, 'https://')}/${repoDir.replace(/.git/, '')}/tree/${sourceVersion}/${fileDir}`;
@@ -446,13 +475,13 @@ class Utils {
    * @param queryParams Query params to add to certain source type links.
    * @param runUuid ID of the MLflow run to add to certain source (revision) links.
    */
-  static renderSource(tags: any, queryParams: any, runUuid: any) {
+  static renderSource(tags: any, queryParams: any, runUuid: any, branchName = 'master') {
     const sourceName = Utils.getSourceName(tags);
     let res = Utils.formatSource(tags);
-    const gitRepoUrlOrNull = Utils.getGitRepoUrl(sourceName);
+    const gitRepoUrlOrNull = Utils.getGitRepoUrl(sourceName, branchName);
     if (gitRepoUrlOrNull) {
       res = (
-        <a target='_top' href={gitRepoUrlOrNull}>
+        <a target="_top" href={gitRepoUrlOrNull}>
           {res}
         </a>
       );
@@ -470,7 +499,7 @@ class Utils {
     runUuid: any,
     sourceName: any,
     workspaceUrl = null,
-    nameOverride = null,
+    nameOverride: string | null = null,
   ) {
     // sourceName may not be present when rendering feature table notebook consumers from remote
     // workspaces or when notebook fetcher failed to fetch the sourceName. Always provide a default
@@ -481,19 +510,9 @@ class Utils {
     const name = nameOverride || baseName;
 
     if (notebookId) {
-      const url = Utils.getNotebookSourceUrl(
-        queryParams,
-        notebookId,
-        revisionId,
-        runUuid,
-        workspaceUrl,
-      );
+      const url = Utils.getNotebookSourceUrl(queryParams, notebookId, revisionId, runUuid, workspaceUrl);
       return (
-        <a
-          title={sourceName || Utils.getDefaultNotebookRevisionName(notebookId, revisionId)}
-          href={url}
-          target='_top'
-        >
+        <a title={sourceName || Utils.getDefaultNotebookRevisionName(notebookId, revisionId)} href={url} target="_top">
           {name}
         </a>
       );
@@ -505,13 +524,7 @@ class Utils {
   /**
    * Returns the URL for the notebook source.
    */
-  static getNotebookSourceUrl(
-    queryParams: any,
-    notebookId: any,
-    revisionId: any,
-    runUuid: any,
-    workspaceUrl = null,
-  ) {
+  static getNotebookSourceUrl(queryParams: any, notebookId: any, revisionId: any, runUuid: any, workspaceUrl = null) {
     let url = Utils.setQueryParams(workspaceUrl || window.location.origin, queryParams);
     url += `#notebook/${notebookId}`;
     if (revisionId) {
@@ -532,7 +545,7 @@ class Utils {
     jobRunId: any,
     jobName: any,
     workspaceUrl = null,
-    nameOverride = null,
+    nameOverride: string | null = null,
   ) {
     // jobName may not be present when rendering feature table job consumers from remote
     // workspaces or when getJob API failed to fetch the jobName. Always provide a default
@@ -543,7 +556,7 @@ class Utils {
     if (jobId) {
       const url = Utils.getJobSourceUrl(queryParams, jobId, jobRunId, workspaceUrl);
       return (
-        <a title={reformatJobName} href={url} target='_top'>
+        <a title={reformatJobName} href={url} target="_top">
           {name}
         </a>
       );
@@ -562,41 +575,6 @@ class Utils {
       url += `/run/${jobRunId}`;
     }
     return url;
-  }
-
-  /**
-   * Returns an svg with some styling applied.
-   */
-  static renderSourceTypeIcon(tags: any) {
-    const imageStyle = {
-      height: '20px',
-      marginRight: '4px',
-    };
-
-    const sourceType = Utils.getSourceType(tags);
-    if (sourceType === 'NOTEBOOK') {
-      if (Utils.getNotebookRevisionId(tags)) {
-        return (
-          <img
-            alt='Notebook Revision Icon'
-            title='Notebook Revision'
-            style={imageStyle}
-            src={revisionSvg}
-          />
-        );
-      } else {
-        return <img alt='Notebook Icon' title='Notebook' style={imageStyle} src={notebookSvg} />;
-      }
-    } else if (sourceType === 'LOCAL') {
-      return (
-        <img alt='Local Source Icon' title='Local Source' style={imageStyle} src={laptopSvg} />
-      );
-    } else if (sourceType === 'PROJECT') {
-      return <img alt='Project Icon' title='Project' style={imageStyle} src={projectSvg} />;
-    } else if (sourceType === 'JOB') {
-      return <img alt='Job Icon' title='Job' style={imageStyle} src={workflowsIconSvg} />;
-    }
-    return <img alt='No icon' style={imageStyle} src={emptySvg} />;
   }
 
   /**
@@ -644,14 +622,22 @@ class Utils {
     return Utils.getRunName(runInfo) || 'Run ' + runUuid;
   }
 
-  static getRunName(runInfo: any) {
-    return runInfo.run_name || '';
+  static getRunName(runInfo: RunInfoEntity) {
+    return runInfo.runName || '';
   }
 
   static getRunNameFromTags(runTags: any) {
     const runNameTag = runTags[Utils.runNameTag];
     if (runNameTag) {
       return runNameTag.value;
+    }
+    return '';
+  }
+
+  static getRunDescriptionFromTags(runTags: any) {
+    const runDescriptionTag = runTags?.[NOTE_CONTENT_TAG];
+    if (runDescriptionTag) {
+      return runDescriptionTag.value;
     }
     return '';
   }
@@ -889,20 +875,15 @@ class Utils {
     return stepResult === 0 ? history1.timestamp - history2.timestamp : stepResult;
   }
 
-  static getVisibleTagValues(tags: any) {
+  static getVisibleTagValues(tags: Record<string, KeyValueEntity>) {
     // Collate tag objects into list of [key, value] lists and filter MLflow-internal tags
     return Object.values(tags)
-      .map((t) => [
-        (t as any).key || (t as any).getKey(),
-        (t as any).value || (t as any).getValue(),
-      ])
+      .map((t) => [t.key, t.value])
       .filter((t) => !t[0].startsWith(MLFLOW_INTERNAL_PREFIX));
   }
 
   static getVisibleTagKeyList(tagsList: any) {
-    return _.uniq(
-      _.flatMap(tagsList, (tags) => Utils.getVisibleTagValues(tags).map(([key]) => key)),
-    );
+    return _.uniq(_.flatMap(tagsList, (tags) => Utils.getVisibleTagValues(tags).map(([key]) => key)));
   }
 
   /**
@@ -931,10 +912,23 @@ class Utils {
    * Each logged model will be of the form:
    * { artifactPath: string, flavors: string[], utcTimeCreated: number }
    */
-  static getLoggedModelsFromTags(tags: any) {
+  static getLoggedModelsFromTags(tags: Record<string, KeyValueEntity>): {
+    artifactPath: string;
+    flavors: string[];
+    utcTimeCreated: number;
+  }[] {
     const modelsTag = tags[Utils.loggedModelsTag];
     if (modelsTag) {
-      const models = JSON.parse(modelsTag.value);
+      let models = null;
+      try {
+        models = JSON.parse(modelsTag.value);
+      } catch (e) {
+        // TODO: for now, we ignore parsing errors to prevent
+        // crashing the page. However, we should come up with
+        // a better solution (e.g. keep only the last X entries
+        // to prevent exceeding tag value limits).
+        // See https://github.com/mlflow/mlflow/issues/12032
+      }
       if (models) {
         // extract artifact path, flavors and creation time from tag.
         // 'python_function' should be interpreted as pyfunc flavor
@@ -948,9 +942,7 @@ class Utils {
           };
         });
         // sort in descending order of creation time
-        const sorted = filtered.sort(
-          (a: any, b: any) => parseFloat(b.utcTimeCreated) - parseFloat(a.utcTimeCreated),
-        );
+        const sorted = filtered.sort((a: any, b: any) => parseFloat(b.utcTimeCreated) - parseFloat(a.utcTimeCreated));
         return _.uniqWith(sorted, (a, b) => (a as any).artifactPath === (b as any).artifactPath);
       }
     }
@@ -977,9 +969,7 @@ class Utils {
       return registeredModel;
     });
     const loggedModelsWithNormalizedPath = loggedModels.flatMap((model: any) => {
-      return model.artifactPath
-        ? [{ ...model, artifactPath: Utils.normalize(model.artifactPath) }]
-        : [];
+      return model.artifactPath ? [{ ...model, artifactPath: Utils.normalize(model.artifactPath) }] : [];
     });
     const models = Utils.concatAndGroupArraysById(
       loggedModelsWithNormalizedPath,
@@ -1022,6 +1012,7 @@ class Utils {
     duration = 3,
     passErrorToParentFrame = false,
   ) {
+    // eslint-disable-next-line no-console -- TODO(FEINF-3587)
     console.error(e);
     if (typeof e === 'string') {
       Utils.displayGlobalErrorNotification(e, duration);
@@ -1058,15 +1049,15 @@ class Utils {
   }
 
   static sortExperimentsById = (experiments: any) => {
-    return _.sortBy(experiments, [({ experiment_id }) => experiment_id]);
+    return _.sortBy(experiments, [({ experimentId }) => experimentId]);
   };
 
   static getExperimentNameMap = (experiments: any) => {
     // Input:
     // [
-    //  { experiment_id: 1, name: '/1/bar' },
-    //  { experiment_id: 2, name: '/2/foo' },
-    //  { experiment_id: 3, name: '/3/bar' },
+    //  { experimentId: 1, name: '/1/bar' },
+    //  { experimentId: 2, name: '/2/foo' },
+    //  { experimentId: 3, name: '/3/bar' },
     // ]
     //
     // Output:
@@ -1086,9 +1077,9 @@ class Utils {
     const idToNames = {};
     Object.entries(experimentsByBasename).forEach(([basename, exps]) => {
       const isUnique = (exps as any).length === 1;
-      (exps as any).forEach(({ experiment_id, name }: any, index: any) => {
+      (exps as any).forEach(({ experimentId, name }: any, index: any) => {
         // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-        idToNames[experiment_id] = {
+        idToNames[experimentId] = {
           name,
           basename: isUnique ? basename : `${basename} (${index + 1})`,
         };
@@ -1103,6 +1094,7 @@ class Utils {
   }
 
   static updatePageTitle(title: any) {
+    /* prettier-ignore */
   }
 
   /**
@@ -1116,9 +1108,7 @@ class Utils {
   }
 
   static shouldRender404(requests: any, requestIdsToCheck: any) {
-    const requestsToCheck = requests.filter((request: any) =>
-      requestIdsToCheck.includes(request.id),
-    );
+    const requestsToCheck = requests.filter((request: any) => requestIdsToCheck.includes(request.id));
     return requestsToCheck.some((request: any) => {
       const { error } = request;
       return error && error.getErrorCode() === ErrorCodes.RESOURCE_DOES_NOT_EXIST;
@@ -1137,8 +1127,8 @@ class Utils {
   }
 
   static compareExperiments(a: any, b: any) {
-    const aId = typeof a.getExperimentId === 'function' ? a.getExperimentId() : a.experiment_id;
-    const bId = typeof b.getExperimentId === 'function' ? b.getExperimentId() : b.experiment_id;
+    const aId = a.experimentId;
+    const bId = b.experimentId;
 
     const aIntId = parseInt(aId, 10);
     const bIntId = parseInt(bId, 10);
@@ -1167,20 +1157,6 @@ class Utils {
     }
 
     return false;
-  }
-
-  static getIframeCorrectedRoute(route: any) {
-    if (shouldUsePathRouting()) {
-      // After enabling path routing, we don't need any hash splitting etc.
-      return route;
-    }
-    if (Utils.isUsingExternalRouter()) {
-      // If using external routing, include the parent params and assume mlflow served at #
-      const parentHref = window.parent.location.href;
-      const parentHrefBeforeMlflowHash = parentHref.split('#')[0];
-      return `${parentHrefBeforeMlflowHash}#mlflow${route}`;
-    }
-    return `./#${route}`; // issue-2213 use relative path in case there is a url prefix
   }
 
   static isValidHttpUrl(str: any) {

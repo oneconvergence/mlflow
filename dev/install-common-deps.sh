@@ -48,7 +48,7 @@ pip install --upgrade pip wheel
 pip --version
 
 if [[ "$SKINNY" == "true" ]]; then
-  MLFLOW_SKINNY=true pip install . --upgrade
+  pip install ./skinny
 else
   pip install .[extras] --upgrade
 fi
@@ -74,7 +74,6 @@ pip install --no-dependencies tests/resources/mlflow-test-plugin
 
 # Print current environment info
 pip install aiohttp
-python dev/show_package_release_dates.py
 which mlflow
 
 # Print mlflow version

@@ -6,22 +6,29 @@
  */
 
 import React from 'react';
-import { Dropdown, Menu, Modal, ChevronDownIcon } from '@databricks/design-system';
-import { Stages, StageTagComponents, ActivityTypes } from '../constants';
-import { DirectTransitionForm } from './DirectTransitionForm';
+import { Dropdown, Menu, ChevronDownIcon, ArrowRightIcon } from '@databricks/design-system';
+import {
+  Stages,
+  StageTagComponents,
+  ActivityTypes,
+  type PendingModelVersionActivity,
+  ACTIVE_STAGES,
+} from '../constants';
 import _ from 'lodash';
 import { FormattedMessage } from 'react-intl';
+import { ModelStageTransitionFormModal, ModelStageTransitionFormModalValues } from './ModelStageTransitionFormModal';
 
-type OwnModelStageTransitionDropdownProps = {
+type ModelStageTransitionDropdownProps = {
   currentStage?: string;
   permissionLevel?: string;
-  onSelect?: (...args: any[]) => any;
+  onSelect?: (activity: PendingModelVersionActivity, comment?: string, archiveExistingVersions?: boolean) => void;
 };
 
-type ModelStageTransitionDropdownState = any;
-
-type ModelStageTransitionDropdownProps = OwnModelStageTransitionDropdownProps &
-  typeof ModelStageTransitionDropdown.defaultProps;
+type ModelStageTransitionDropdownState = {
+  confirmModalVisible: boolean;
+  confirmingActivity: PendingModelVersionActivity | null;
+  handleConfirm: ((values: ModelStageTransitionFormModalValues) => void) | undefined;
+};
 
 export class ModelStageTransitionDropdown extends React.Component<
   ModelStageTransitionDropdownProps,
@@ -31,28 +38,28 @@ export class ModelStageTransitionDropdown extends React.Component<
     currentStage: Stages.NONE,
   };
 
-  state = {
+  state: ModelStageTransitionDropdownState = {
     confirmModalVisible: false,
     confirmingActivity: null,
     handleConfirm: undefined,
   };
 
-  transitionFormRef = React.createRef();
-
-  handleMenuItemClick = (activity: any) => {
+  handleMenuItemClick = (activity: PendingModelVersionActivity) => {
     const { onSelect } = this.props;
     this.setState({
       confirmModalVisible: true,
       confirmingActivity: activity,
       handleConfirm:
         onSelect &&
-        (() => {
+        ((values: ModelStageTransitionFormModalValues) => {
           this.setState({ confirmModalVisible: false });
-          const archiveExistingVersions = Boolean(
-            (this as any).transitionFormRef.current.getFieldValue('archiveExistingVersions'),
-          );
-          // @ts-expect-error TS(2722): Cannot invoke an object which is possibly 'undefin... Remove this comment to see the full error message
-          this.props.onSelect(activity, archiveExistingVersions);
+
+          if (values) {
+            const { archiveExistingVersions = false } = values;
+            // @ts-expect-error TS(2722): Cannot invoke an object which is possibly 'undefin... Remove this comment to see the full error message
+            onSelect(activity, archiveExistingVersions);
+            return;
+          }
         }),
     });
   };
@@ -68,10 +75,10 @@ export class ModelStageTransitionDropdown extends React.Component<
   };
 
   getMenu() {
-    const { currentStage, onSelect } = this.props;
+    const { currentStage } = this.props;
     const nonCurrentStages = this.getNoneCurrentStages(currentStage);
     return (
-      <Menu onSelect={onSelect}>
+      <Menu>
         {nonCurrentStages.map((stage) => (
           <Menu.Item
             key={`transition-to-${stage}`}
@@ -83,13 +90,13 @@ export class ModelStageTransitionDropdown extends React.Component<
             }
           >
             <FormattedMessage
-              defaultMessage='Transition to'
-              description='Text for transitioning a model version to a different stage under
-                 dropdown menu in model version page'
+              defaultMessage="Transition to"
+              description="Text for transitioning a model version to a different stage under
+                 dropdown menu in model version page"
             />
-            &nbsp;&nbsp;&nbsp;&nbsp;
-            <i className='fas fa-long-arrow-right' />
-            &nbsp;&nbsp;&nbsp;&nbsp;
+            &nbsp;&nbsp;&nbsp;
+            <ArrowRightIcon />
+            &nbsp;&nbsp;&nbsp;
             {StageTagComponents[stage]}
           </Menu.Item>
         ))}
@@ -99,59 +106,34 @@ export class ModelStageTransitionDropdown extends React.Component<
 
   renderConfirmModal() {
     const { confirmModalVisible, confirmingActivity, handleConfirm } = this.state;
-    if (confirmingActivity) {
-      const formComponent = (
-        <DirectTransitionForm
-          // @ts-expect-error TS(2322): Type '{ innerRef: RefObject<unknown>; toStage: any... Remove this comment to see the full error message
-          innerRef={this.transitionFormRef}
-          toStage={(confirmingActivity as any).to_stage}
-        />
-      );
-      return (
-        <Modal
-          title={
-            <FormattedMessage
-              defaultMessage='Stage Transition'
-              description='Title text for model version stage transitions in confirm modal'
-            />
-          }
-          visible={confirmModalVisible}
-          onOk={handleConfirm}
-          onCancel={this.handleConfirmModalCancel}
-          okText={
-            <FormattedMessage
-              defaultMessage='OK'
-              description='Text for OK button on the confirmation page for stage transition
-                 on the model versions page'
-            />
-          }
-          cancelText={
-            <FormattedMessage
-              defaultMessage='Cancel'
-              description='Text for cancel button on the confirmation page for stage
-                transitions on the model versions page'
-            />
-          }
-        >
-          {renderActivityDescription(confirmingActivity)}
-          {formComponent}
-        </Modal>
-      );
+
+    if (!confirmingActivity) {
+      return null;
     }
-    return null;
+
+    const allowArchivingExistingVersions =
+      confirmingActivity.type === ActivityTypes.APPLIED_TRANSITION &&
+      ACTIVE_STAGES.includes(confirmingActivity.to_stage);
+
+    return (
+      <ModelStageTransitionFormModal
+        visible={confirmModalVisible}
+        toStage={confirmingActivity.to_stage}
+        onConfirm={handleConfirm}
+        onCancel={this.handleConfirmModalCancel}
+        transitionDescription={renderActivityDescription(confirmingActivity)}
+        allowArchivingExistingVersions={allowArchivingExistingVersions}
+      />
+    );
   }
 
   render() {
     const { currentStage } = this.props;
     return (
       <span>
-        <Dropdown
-          overlay={this.getMenu()}
-          trigger={['click']}
-          className='stage-transition-dropdown'
-        >
+        <Dropdown overlay={this.getMenu()} trigger={['click']} className="stage-transition-dropdown">
           <span>
-            {StageTagComponents[currentStage]}
+            {StageTagComponents[currentStage ?? Stages.NONE]}
             <ChevronDownIcon css={{ cursor: 'pointer', marginLeft: -4 }} />
           </span>
         </Dropdown>
@@ -161,18 +143,18 @@ export class ModelStageTransitionDropdown extends React.Component<
   }
 }
 
-export const renderActivityDescription = (activity: any) => {
+export const renderActivityDescription = (activity: PendingModelVersionActivity) => {
   if (activity) {
     return (
       <div>
         <FormattedMessage
-          defaultMessage='Transition to'
-          description='Text for activity description under confirmation modal for model
-             version stage transition'
+          defaultMessage="Transition to"
+          description="Text for activity description under confirmation modal for model
+             version stage transition"
         />
         &nbsp;&nbsp;&nbsp;
-        <i className='fas fa-long-arrow-right' />
-        &nbsp;&nbsp;&nbsp;&nbsp;
+        <ArrowRightIcon />
+        &nbsp;&nbsp;&nbsp;
         {StageTagComponents[activity.to_stage]}
       </div>
     );

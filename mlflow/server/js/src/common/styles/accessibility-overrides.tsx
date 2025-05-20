@@ -1,8 +1,10 @@
-import React from 'react';
 import { Global } from '@emotion/react';
-import { primaryBlue, gray600 } from './color';
 
-export const accessibilityOverrides = {
+const gray600 = '#6B6B6B';
+
+const blue500 = '#2374BB';
+
+const accessibilityOverrides = {
   a: {
     // using webapp colors
     color: '#2374bb',
@@ -12,18 +14,18 @@ export const accessibilityOverrides = {
     },
   },
   '.ant-btn-primary': {
-    borderColor: primaryBlue,
-    backgroundColor: primaryBlue,
+    borderColor: blue500,
+    backgroundColor: blue500,
   },
   '.ant-table-placeholder': {
     color: gray600,
   },
   '.ant-tabs-nav .ant-tabs-tab-active': {
-    color: primaryBlue,
+    color: blue500,
   },
   '.ant-radio-button-wrapper-checked': {
     '&:not(.ant-radio-button-wrapper-disabled), &:first-child': {
-      color: primaryBlue,
+      color: blue500,
     },
   },
 };

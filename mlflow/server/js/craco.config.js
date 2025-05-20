@@ -8,8 +8,7 @@ const proxyTarget = process.env.MLFLOW_PROXY;
 const useProxyServer = !!proxyTarget && !process.env.MLFLOW_DEV_PROXY_MODE;
 
 const isDevserverWebsocketRequest = (request) =>
-  request.url === '/ws' &&
-  (request.headers.upgrade === 'websocket' || request.headers['sec-websocket-version']);
+  request.url === '/ws' && (request.headers.upgrade === 'websocket' || request.headers['sec-websocket-version']);
 
 function mayProxy(pathname) {
   const publicPrefixPrefix = '/static-files/';
@@ -96,9 +95,7 @@ function enableOptionalTypescript(config) {
    * We're going to exclude typechecking test files from webpack's pipeline
    */
 
-  const ForkTsCheckerPlugin = config.plugins.find(
-    (plugin) => plugin.constructor.name === 'ForkTsCheckerWebpackPlugin',
-  );
+  const ForkTsCheckerPlugin = config.plugins.find((plugin) => plugin.constructor.name === 'ForkTsCheckerWebpackPlugin');
 
   if (ForkTsCheckerPlugin) {
     ForkTsCheckerPlugin.options.typescript.configOverwrite.exclude = [
@@ -258,18 +255,12 @@ module.exports = function () {
         };
 
         jestConfig.resetMocks = false; // ML-20462 Restore resetMocks
-        jestConfig.collectCoverageFrom = [
-          'src/**/*.{js,jsx}',
-          '!**/*.test.{js,jsx}',
-          '!**/__tests__/*.{js,jsx}',
-        ];
+        jestConfig.collectCoverageFrom = ['src/**/*.{js,jsx}', '!**/*.test.{js,jsx}', '!**/__tests__/*.{js,jsx}'];
         jestConfig.coverageReporters = ['lcov'];
-        jestConfig.setupFiles = [
-          'jest-canvas-mock',
-          '<rootDir>/scripts/throw-on-prop-type-warning.js',
-        ];
+        jestConfig.setupFiles = ['jest-canvas-mock'];
         jestConfig.setupFilesAfterEnv.push('<rootDir>/scripts/env-mocks.js');
         jestConfig.setupFilesAfterEnv.push('<rootDir>/scripts/setup-jest-dom-matchers.js');
+        jestConfig.setupFilesAfterEnv.push('<rootDir>/src/setupTests.js');
         // Adjust config to work with dependencies using ".mjs" file extensions
         jestConfig.moduleFileExtensions.push('mjs');
         // Remove when this issue is resolved: https://github.com/gsoft-inc/craco/issues/393
@@ -282,7 +273,9 @@ module.exports = function () {
 
         const moduleNameMapper = {
           ...jestConfig.moduleNameMapper,
+          '@databricks/design-system/(.+)': '<rootDir>/node_modules/@databricks/design-system/dist/$1',
           '@databricks/web-shared/(.*)': '<rootDir>/src/shared/web-shared/$1',
+          '@mlflow/mlflow/(.*)': '<rootDir>/$1',
         };
 
         jestConfig.moduleNameMapper = moduleNameMapper;
@@ -299,17 +292,25 @@ module.exports = function () {
         webpackConfig.resolve = {
           ...webpackConfig.resolve,
           plugins: [new TsconfigPathsPlugin(), ...webpackConfig.resolve.plugins],
+          fallback: {
+            // Required by 'plotly.js' download image feature
+            stream: require.resolve('stream-browserify'),
+          },
+          alias: {
+            ...webpackConfig.resolve.alias,
+            // Fix integration with react 18 and react-dnd@15
+            // https://github.com/react-dnd/react-dnd/issues/3433#issuecomment-1102144912
+            'react/jsx-runtime.js': require.resolve('react/jsx-runtime'),
+            'react/jsx-dev-runtime.js': require.resolve('react/jsx-dev-runtime'),
+          },
         };
         console.log('Webpack config:', webpackConfig);
         return webpackConfig;
       },
       plugins: [
         new webpack.EnvironmentPlugin({
-          HIDE_HEADER: process.env.HIDE_HEADER ? 'true' : 'false',
-          HIDE_EXPERIMENT_LIST: process.env.HIDE_EXPERIMENT_LIST ? 'true' : 'false',
-          SHOW_GDPR_PURGING_MESSAGES: process.env.SHOW_GDPR_PURGING_MESSAGES ? 'true' : 'false',
-          USE_ABSOLUTE_AJAX_URLS: process.env.USE_ABSOLUTE_AJAX_URLS ? 'true' : 'false',
-          SHOULD_REDIRECT_IFRAME: process.env.SHOULD_REDIRECT_IFRAME ? 'true' : 'false',
+          MLFLOW_SHOW_GDPR_PURGING_MESSAGES: process.env.MLFLOW_SHOW_GDPR_PURGING_MESSAGES ? 'true' : 'false',
+          MLFLOW_USE_ABSOLUTE_AJAX_URLS: process.env.MLFLOW_USE_ABSOLUTE_AJAX_URLS ? 'true' : 'false',
         }),
       ],
     },

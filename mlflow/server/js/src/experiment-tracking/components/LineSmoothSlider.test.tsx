@@ -1,77 +1,73 @@
-/**
- * NOTE: this code file was automatically migrated to TypeScript using ts-migrate and
- * may contain multiple `any` type annotations and `@ts-expect-error` directives.
- * If possible, please improve types while making changes to this file. If the type
- * annotations are already looking good, please remove this comment.
- */
-
-import { shallow } from 'enzyme';
-import React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { LineSmoothSlider } from './LineSmoothSlider';
+import { useState } from 'react';
+import userEvent from '@testing-library/user-event';
 
 describe('LineSmoothSlider', () => {
-  let wrapper;
-  let minimalProps: any;
+  const TestComponent = ({ marks }: { marks?: Record<string, any> }) => {
+    const [value, setValue] = useState(50);
+    return (
+      <>
+        <LineSmoothSlider min={0} max={100} value={value} onChange={setValue} marks={marks} />
+        current value: {value}
+      </>
+    );
+  };
 
-  beforeEach(() => {
-    minimalProps = {
-      min: 0,
-      max: 1,
-      handleLineSmoothChange: jest.fn(),
-      defaultValue: 0,
-    };
+  test('should change value when slider is used', async () => {
+    render(<TestComponent />);
+
+    expect(screen.getByText('current value: 50')).toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByRole('slider'), { key: 'ArrowRight' });
+    expect(screen.getByText('current value: 51')).toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByRole('slider'), { key: 'End' });
+    expect(screen.getByText('current value: 100')).toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByRole('slider'), { key: 'Home' });
+    expect(screen.getByText('current value: 0')).toBeInTheDocument();
   });
 
-  test('should render with minimal props without exploding', () => {
-    wrapper = shallow(<LineSmoothSlider {...minimalProps} />).dive(1);
-    expect(wrapper.length).toBe(1);
+  test('should change value when input value is changed with respect to boundaries', async () => {
+    render(<TestComponent />);
+
+    expect(screen.getByText('current value: 50')).toBeInTheDocument();
+
+    await userEvent.clear(screen.getByRole('spinbutton'));
+    await userEvent.type(screen.getByRole('spinbutton'), '25');
+    fireEvent.blur(screen.getByRole('spinbutton'));
+    expect(screen.getByText('current value: 25')).toBeInTheDocument();
+
+    await userEvent.clear(screen.getByRole('spinbutton'));
+    await userEvent.type(screen.getByRole('spinbutton'), '333');
+    fireEvent.blur(screen.getByRole('spinbutton'));
+    expect(screen.getByText('current value: 100')).toBeInTheDocument();
   });
 
-  test('should render Slider and InputNumber with min|max|default value', () => {
-    const props = {
-      min: 0,
-      max: 10,
-      handleLineSmoothChange: jest.fn(),
-      defaultValue: 5,
-    };
-    wrapper = shallow(<LineSmoothSlider {...props} />).dive(1);
+  test('should respect marks when changing the value', async () => {
+    const marks = { '0': '0', '30': '30', '50': '50', '100': '100' };
+    render(<TestComponent marks={marks} />);
 
-    const slider = wrapper.find('Slider').get(0);
-    expect(slider.props.min).toBe(0);
-    expect(slider.props.max).toBe(10);
-    expect(slider.props.value).toBe(5);
+    expect(screen.getByText('current value: 50')).toBeInTheDocument();
 
-    const inputNumber = wrapper.find('[data-test-id="InputNumber"]').get(0);
-    expect(inputNumber.props.min).toBe(0);
-    expect(inputNumber.props.max).toBe(10);
-    expect(inputNumber.props.value).toBe(5);
-  });
+    await userEvent.clear(screen.getByRole('spinbutton'));
+    await userEvent.type(screen.getByRole('spinbutton'), '25');
+    fireEvent.blur(screen.getByRole('spinbutton'));
+    expect(screen.getByText('current value: 30')).toBeInTheDocument();
 
-  test('should invoke handleLineSmoothChange when InputNumber value is changed', () => {
-    const props = {
-      min: 0,
-      max: 10,
-      handleLineSmoothChange: jest.fn(),
-      defaultValue: 5,
-    };
-    wrapper = shallow(<LineSmoothSlider {...props} />).dive(1);
-    const inputNumber = wrapper.find('[data-test-id="InputNumber"]');
-    inputNumber.simulate('change', 6);
-    expect(props.handleLineSmoothChange).toHaveBeenCalledWith(6);
-    expect(wrapper.state('inputValue')).toBe(6);
-  });
+    await userEvent.clear(screen.getByRole('spinbutton'));
+    await userEvent.type(screen.getByRole('spinbutton'), '888');
+    fireEvent.blur(screen.getByRole('spinbutton'));
 
-  test('should invoke Slider when InputNumber value is changed', () => {
-    const props = {
-      min: 0,
-      max: 10,
-      handleLineSmoothChange: jest.fn(),
-      defaultValue: 5,
-    };
-    wrapper = shallow(<LineSmoothSlider {...props} />).dive(1);
-    const slider = wrapper.find('Slider');
-    slider.simulate('change', 1);
-    expect(props.handleLineSmoothChange).toHaveBeenCalledWith(1);
-    expect(wrapper.state('inputValue')).toBe(1);
+    expect(screen.getByText('current value: 100')).toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByRole('slider'), { key: 'ArrowLeft' });
+
+    expect(screen.getByText('current value: 50')).toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByRole('slider'), { key: 'ArrowLeft' });
+
+    expect(screen.getByText('current value: 30')).toBeInTheDocument();
   });
 });

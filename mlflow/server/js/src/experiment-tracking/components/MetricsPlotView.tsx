@@ -13,15 +13,16 @@ import { X_AXIS_STEP, X_AXIS_RELATIVE, MAX_LINE_SMOOTHNESS } from './MetricsPlot
 import { CHART_TYPE_BAR, convertMetricsToCsv } from './MetricsPlotPanel';
 import { LazyPlot } from './LazyPlot';
 import { generateInfinityAnnotations } from '../utils/MetricsUtils';
-import { injectIntl } from 'react-intl';
+import { injectIntl, IntlShape } from 'react-intl';
 
 const MAX_RUN_NAME_DISPLAY_LENGTH = 24;
+const EMA_THRESHOLD = 1;
 
 export const EMA = (mArray: any, smoothingWeight: any) => {
   // If all elements in the set of metric values are constant, or if
   // the degree of smoothing is set to the minimum value, return the
   // original set of metric values
-  if (smoothingWeight <= 1 || mArray.every((v: any) => v === mArray[0])) {
+  if (smoothingWeight <= 1 || !mArray || mArray.length <= EMA_THRESHOLD || mArray.every((v: any) => v === mArray[0])) {
     return mArray;
   }
 
@@ -82,7 +83,7 @@ export class MetricsPlotViewImpl extends React.Component<MetricsPlotViewImplProp
     return legend;
   };
 
-  static getXValuesForLineChart(history: any, xAxisType: any) {
+  static getXValuesForLineChart(history: any, xAxisType: any, intl?: IntlShape) {
     if (history.length === 0) {
       return [];
     }
@@ -95,7 +96,7 @@ export class MetricsPlotViewImpl extends React.Component<MetricsPlotViewImplProp
         return history.map(({ timestamp }: any) => (timestamp - minTimestamp) / 1000);
       }
       default: // X_AXIS_WALL
-        return history.map(({ timestamp }: any) => Utils.formatTimestamp(timestamp));
+        return history.map(({ timestamp }: any) => timestamp);
     }
   }
 
@@ -112,10 +113,8 @@ export class MetricsPlotViewImpl extends React.Component<MetricsPlotViewImplProp
       const { metricKey, history } = metric;
       // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       annotationData[metricKey] = generateInfinityAnnotations({
-        xValues: (MetricsPlotView as any).getXValuesForLineChart(history, xAxis),
-        yValues: history.map((entry: any) =>
-          typeof entry.value === 'number' ? entry.value : Number(entry.value),
-        ),
+        xValues: (MetricsPlotView as any).getXValuesForLineChart(history, xAxis, this.props.intl),
+        yValues: history.map((entry: any) => (typeof entry.value === 'number' ? entry.value : Number(entry.value))),
         isLogScale: isYAxisLog,
         stringFormatter: (value) => this.props.intl.formatMessage(value, { metricKey }),
       });
@@ -145,9 +144,7 @@ export class MetricsPlotViewImpl extends React.Component<MetricsPlotViewImplProp
       // metrics
       const isSingleHistory = historyValues.filter((value: any) => !isNaN(value)).length <= 1;
 
-      const visible = !deselectedCurvesSet.has(Utils.getCurveKey(runUuid, metricKey))
-        ? true
-        : 'legendonly';
+      const visible = !deselectedCurvesSet.has(Utils.getCurveKey(runUuid, metricKey)) ? true : 'legendonly';
 
       if (this.#annotationData && metricKey in this.#annotationData && visible === true) {
         // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
@@ -159,15 +156,14 @@ export class MetricsPlotViewImpl extends React.Component<MetricsPlotViewImplProp
       return {
         name: (MetricsPlotView as any).getLineLegend(metricKey, runDisplayName, isComparing),
         x: (MetricsPlotView as any).getXValuesForLineChart(history, xAxis),
-        y: (isSingleHistory ? historyValues : EMA(historyValues, lineSmoothness)).map(
-          (entry: any) => (!isFinite(entry) ? NaN : entry),
+        y: (isSingleHistory ? historyValues : EMA(historyValues, lineSmoothness)).map((entry: any) =>
+          !isFinite(entry) ? NaN : entry,
         ),
         text: historyValues.map((value: any) => (isNaN(value) ? value : value.toFixed(5))),
         type: 'scattergl',
         mode: isSingleHistory ? 'markers' : 'lines+markers',
         marker: { opacity: isSingleHistory || showPoint ? 1 : 0 },
-        hovertemplate:
-          isSingleHistory || lineSmoothness === 1 ? '%{y}' : 'Value: %{text}<br>Smoothed: %{y}',
+        hovertemplate: isSingleHistory || lineSmoothness === 1 ? '%{y}' : 'Value: %{text}<br>Smoothed: %{y}',
         visible: visible,
         runId: runUuid,
         metricName: metricKey,
@@ -201,14 +197,9 @@ export class MetricsPlotViewImpl extends React.Component<MetricsPlotViewImplProp
       return map;
     }, {});
 
-    const arrayOfHistorySortedByMetricKey = _.sortBy(
-      Object.values(historyByMetricKey),
-      'metricKey',
-    );
+    const arrayOfHistorySortedByMetricKey = _.sortBy(Object.values(historyByMetricKey), 'metricKey');
 
-    const sortedMetricKeys = arrayOfHistorySortedByMetricKey.map(
-      (history) => (history as any).metricKey,
-    );
+    const sortedMetricKeys = arrayOfHistorySortedByMetricKey.map((history) => (history as any).metricKey);
     const deselectedCurvesSet = new Set(deselectedCurves);
     const data = runUuids.map((runUuid, i) => {
       const visibility = deselectedCurvesSet.has(runUuid) ? { visible: 'legendonly' } : {};
@@ -246,12 +237,10 @@ export class MetricsPlotViewImpl extends React.Component<MetricsPlotViewImplProp
   render() {
     const { onLayoutChange, onClick, onLegendClick, onLegendDoubleClick } = this.props;
     const plotProps =
-      this.props.chartType === CHART_TYPE_BAR
-        ? this.getPlotPropsForBarChart()
-        : this.getPlotPropsForLineChart();
+      this.props.chartType === CHART_TYPE_BAR ? this.getPlotPropsForBarChart() : this.getPlotPropsForLineChart();
 
     return (
-      <div className='metrics-plot-view-container'>
+      <div className="metrics-plot-view-container">
         <LazyPlot
           {...plotProps}
           useResizeHandler

@@ -93,7 +93,6 @@ def default_filter(name, obj):
 
 
 class DecoratorData:
-
     """Decorator data.
 
     Attributes
@@ -116,7 +115,6 @@ class DecoratorData:
 
 
 class Settings:
-
     """Define the patching behaviour.
 
     Attributes
@@ -170,7 +168,6 @@ class Settings:
 
 
 class Patch:
-
     """Describe all the information required to apply a patch.
 
     Attributes
@@ -231,7 +228,7 @@ class Patch:
         is_equal = self.__eq__(other)
         return is_equal if is_equal is NotImplemented else not is_equal
 
-    def __hash__(self):  # pylint: disable=useless-super-delegation
+    def __hash__(self):
         return super().__hash__()
 
     def _update(self, **kwargs):
@@ -335,6 +332,7 @@ def revert(patch):
     ----------
     patch : gorilla.Patch
         Patch.
+
     Note
     ----
     This is only possible if the attribute :attr:`Settings.store_hit` was set
@@ -492,7 +490,7 @@ def settings(**kwargs):
     return decorator
 
 
-def filter(value):  # pylint: disable=redefined-builtin
+def filter(value):
     """Modifier decorator to force the inclusion or exclusion of an attribute.
 
     This only modifies the behaviour of the :func:`create_patches` function
@@ -605,8 +603,7 @@ def get_original_attribute(obj, name, bypass_descriptor_protocol=False):
             return getattr(obj_, name_)
 
     no_original_stored_err = (
-        "Original attribute %s was not stored when patching, set "
-        "store_hit=True will address this."
+        "Original attribute %s was not stored when patching, set store_hit=True will address this."
     )
 
     if inspect.isclass(obj):
@@ -795,6 +792,6 @@ def _module_iterator(root, recursive=True):
                     yield module
 
 
-def _true(*args, **kwargs):  # pylint: disable=unused-argument
+def _true(*args, **kwargs):
     """Return ``True``."""
     return True

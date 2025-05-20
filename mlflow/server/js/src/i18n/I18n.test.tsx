@@ -1,28 +1,22 @@
 import React from 'react';
 import { FormattedMessage } from 'react-intl';
-import { mountWithIntl, shallowWithIntl } from '../common/utils/TestUtils';
+import { renderWithIntl, screen } from '@mlflow/mlflow/src/common/utils/TestUtils.react18';
 
 function TestComponent() {
   return (
-    <div data-test-id='test-component'>
+    <div data-testid="test-component">
       <FormattedMessage
-        defaultMessage='This is a default message!'
-        description='Test description to ensure that the default message is rendered'
+        defaultMessage="This is a default message!"
+        description="Test description to ensure that the default message is rendered"
       />
     </div>
   );
 }
 
 describe('i18n', () => {
-  it('mounting returns the default message without any locales generated', () => {
+  it('render returns the default message without any locales generated', () => {
     const defaultMessage = 'This is a default message!';
-    const wrapper = mountWithIntl(<TestComponent />);
-    expect(wrapper.find('[data-test-id="test-component"]').text()).toEqual(defaultMessage);
-  });
-
-  it('shallow renders without blowing up', () => {
-    const wrapper = shallowWithIntl(<TestComponent />);
-
-    expect(wrapper.dive().find('[data-test-id="test-component"]').length).toEqual(1);
+    renderWithIntl(<TestComponent />);
+    expect(screen.getByTestId('test-component')).toHaveTextContent(defaultMessage);
   });
 });

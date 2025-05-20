@@ -22,7 +22,7 @@ from mlflow.environment_variables import (
 from mlflow.exceptions import MlflowException
 from mlflow.store.artifact.artifact_repository_registry import get_artifact_repository
 from mlflow.store.artifact.http_artifact_repo import HttpArtifactRepository
-from mlflow.tracking._tracking_service.utils import _get_default_host_creds
+from mlflow.utils.credentials import get_default_host_creds
 from mlflow.utils.rest_utils import MlflowHostCreds
 
 
@@ -46,7 +46,7 @@ class MockResponse:
 
 
 class MockStreamResponse(MockResponse):
-    def iter_content(self, chunk_size):  # pylint: disable=unused-argument
+    def iter_content(self, chunk_size):
         yield self.data.encode("utf-8")
 
     def __enter__(self):
@@ -126,38 +126,45 @@ def test_log_artifact(
 
     # assert reverted to normal upload when mpu is not supported
     # mock that create_multipart_upload will returns a 400 error with appropriate message
-    with mock.patch.object(
-        http_artifact_repo,
-        "create_multipart_upload",
-        side_effect=HTTPError(
-            response=MockResponse(
-                data={
-                    "message": "Multipart upload is not supported for the current "
-                    "artifact repository"
-                },
-                status_code=501,
-            )
+    with (
+        mock.patch.object(
+            http_artifact_repo,
+            "create_multipart_upload",
+            side_effect=HTTPError(
+                response=MockResponse(
+                    data={
+                        "message": "Multipart upload is not supported for the current "
+                        "artifact repository"
+                    },
+                    status_code=501,
+                )
+            ),
         ),
-    ), mock.patch(
-        "mlflow.store.artifact.http_artifact_repo.http_request",
-        return_value=MockResponse({}, 200),
-    ) as mock_put:
+        mock.patch(
+            "mlflow.store.artifact.http_artifact_repo.http_request",
+            return_value=MockResponse({}, 200),
+        ) as mock_put,
+    ):
         http_artifact_repo.log_artifact(file_path, artifact_path)
         assert_called_log_artifact(mock_put)
 
     # assert if mpu is triggered but the uploads failed, mpu is aborted and exception is raised
-    with mock.patch("requests.put", side_effect=Exception("MPU_UPLOAD_FAILS")), mock.patch.object(
-        http_artifact_repo,
-        "create_multipart_upload",
-        return_value=CreateMultipartUploadResponse(
-            upload_id="upload_id",
-            credentials=[MultipartUploadCredential(url="url", part_number=1, headers={})],
+    with (
+        mock.patch("requests.put", side_effect=Exception("MPU_UPLOAD_FAILS")),
+        mock.patch.object(
+            http_artifact_repo,
+            "create_multipart_upload",
+            return_value=CreateMultipartUploadResponse(
+                upload_id="upload_id",
+                credentials=[MultipartUploadCredential(url="url", part_number=1, headers={})],
+            ),
         ),
-    ), mock.patch.object(
-        http_artifact_repo,
-        "abort_multipart_upload",
-        return_value=None,
-    ) as mock_abort:
+        mock.patch.object(
+            http_artifact_repo,
+            "abort_multipart_upload",
+            return_value=None,
+        ) as mock_abort,
+    ):
         with pytest.raises(Exception, match="MPU_UPLOAD_FAILS"):
             http_artifact_repo.log_artifact(file_path, artifact_path)
         mock_abort.assert_called_once()
@@ -201,7 +208,7 @@ def test_list_artifacts(http_artifact_repo):
         endpoint = "/mlflow-artifacts/artifacts"
         url, _ = http_artifact_repo.artifact_uri.split(endpoint, maxsplit=1)
         mock_get.assert_called_once_with(
-            _get_default_host_creds(url),
+            get_default_host_creds(url),
             endpoint,
             "GET",
             params={"path": ""},
@@ -246,7 +253,7 @@ def test_list_artifacts(http_artifact_repo):
             http_artifact_repo.list_artifacts()
 
 
-@pytest.mark.parametrize("path", ["/tmp/path", "../../path"])
+@pytest.mark.parametrize("path", ["/tmp/path", "../../path", "%2E%2E%2Fpath"])
 def test_list_artifacts_malicious_path(http_artifact_repo, path):
     with mock.patch(
         "mlflow.store.artifact.http_artifact_repo.http_request",
@@ -259,7 +266,7 @@ def test_list_artifacts_malicious_path(http_artifact_repo, path):
             200,
         ),
     ):
-        with pytest.raises(MlflowException, match=f"Invalid path: {path}"):
+        with pytest.raises(MlflowException, match="Invalid path"):
             http_artifact_repo.list_artifacts()
 
 
@@ -435,15 +442,15 @@ def test_complete_multipart_upload(http_artifact_repo, monkeypatch):
         endpoint = "/mlflow-artifacts"
         url, _ = http_artifact_repo.artifact_uri.split(endpoint, maxsplit=1)
         mock_post.assert_called_once_with(
-            _get_default_host_creds(url),
+            get_default_host_creds(url),
             "/mlflow-artifacts/mpu/complete/artifact/path",
             "POST",
             json={
                 "path": "local_file",
                 "upload_id": "upload_id",
                 "parts": [
-                    {"part_number": 1, "etag": "etag1"},
-                    {"part_number": 2, "etag": "etag2"},
+                    {"part_number": 1, "etag": "etag1", "url": None},
+                    {"part_number": 2, "etag": "etag2", "url": None},
                 ],
             },
         )
@@ -463,7 +470,7 @@ def test_abort_multipart_upload(http_artifact_repo, monkeypatch):
         endpoint = "/mlflow-artifacts"
         url, _ = http_artifact_repo.artifact_uri.split(endpoint, maxsplit=1)
         mock_post.assert_called_once_with(
-            _get_default_host_creds(url),
+            get_default_host_creds(url),
             "/mlflow-artifacts/mpu/abort/artifact/path",
             "POST",
             json={

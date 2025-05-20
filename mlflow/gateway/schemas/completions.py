@@ -1,8 +1,8 @@
-from typing import List, Literal, Optional
+from typing import Optional
 
-from mlflow.gateway.base_models import ResponseModel
-from mlflow.gateway.config import IS_PYDANTIC_V2
-from mlflow.gateway.schemas.chat import BaseRequestPayload
+from mlflow.gateway.base_models import RequestModel, ResponseModel
+from mlflow.types.chat import BaseRequestPayload
+from mlflow.utils import IS_PYDANTIC_V2_OR_NEWER
 
 _REQUEST_PAYLOAD_EXTRA_SCHEMA = {
     "example": {
@@ -15,11 +15,12 @@ _REQUEST_PAYLOAD_EXTRA_SCHEMA = {
 }
 
 
-class RequestPayload(BaseRequestPayload):
+class RequestPayload(BaseRequestPayload, RequestModel):
     prompt: str
+    model: Optional[str] = None
 
     class Config:
-        if IS_PYDANTIC_V2:
+        if IS_PYDANTIC_V2_OR_NEWER:
             json_schema_extra = _REQUEST_PAYLOAD_EXTRA_SCHEMA
         else:
             schema_extra = _REQUEST_PAYLOAD_EXTRA_SCHEMA
@@ -53,14 +54,56 @@ _RESPONSE_PAYLOAD_EXTRA_SCHEMA = {
 
 class ResponsePayload(ResponseModel):
     id: Optional[str] = None
-    object: Literal["text_completion"] = "text_completion"
+    object: str = "text_completion"
     created: int
     model: str
-    choices: List[Choice]
+    choices: list[Choice]
     usage: CompletionsUsage
 
     class Config:
-        if IS_PYDANTIC_V2:
+        if IS_PYDANTIC_V2_OR_NEWER:
             json_schema_extra = _RESPONSE_PAYLOAD_EXTRA_SCHEMA
         else:
             schema_extra = _RESPONSE_PAYLOAD_EXTRA_SCHEMA
+
+
+class StreamDelta(ResponseModel):
+    role: Optional[str] = None
+    content: Optional[str] = None
+
+
+class StreamChoice(ResponseModel):
+    index: int
+    finish_reason: Optional[str] = None
+    text: Optional[str] = None
+
+
+_STREAM_RESPONSE_PAYLOAD_EXTRA_SCHEMA = {
+    "example": {
+        "id": "cmpl-123",
+        "object": "text_completion",
+        "created": 1589478378,
+        "model": "gpt-4",
+        "choices": [
+            {
+                "index": 6,
+                "finish_reason": "stop",
+                "delta": {"role": "assistant", "content": "you?"},
+            }
+        ],
+    }
+}
+
+
+class StreamResponsePayload(ResponseModel):
+    id: Optional[str] = None
+    object: str = "text_completion_chunk"
+    created: int
+    model: str
+    choices: list[StreamChoice]
+
+    class Config:
+        if IS_PYDANTIC_V2_OR_NEWER:
+            json_schema_extra = _STREAM_RESPONSE_PAYLOAD_EXTRA_SCHEMA
+        else:
+            schema_extra = _STREAM_RESPONSE_PAYLOAD_EXTRA_SCHEMA

@@ -9,7 +9,7 @@ export const ErrorCodes = {
   RESOURCE_CONFLICT: 'RESOURCE_CONFLICT',
 };
 
-export const Version = '2.9.1.dev0';
+export const Version = '2.21.2';
 
 const DOCS_VERSION = 'latest';
 
@@ -21,23 +21,19 @@ export const ModelRegistryDocUrl = `${DOCS_ROOT}/model-registry.html`;
 
 export const ModelRegistryOnboardingString = (
   <FormattedMessage
-    defaultMessage='Share and manage machine learning models.'
-    description='Default text for model registry onboarding on the model list page'
+    defaultMessage="Share and manage machine learning models."
+    description="Default text for model registry onboarding on the model list page"
   />
 );
 
-export const RegisteringModelDocUrl =
-  DOCS_ROOT + '/model-registry.html#adding-an-mlflow-model-to-the-model-registry';
+export const RegisteringModelDocUrl = DOCS_ROOT + '/model-registry.html#adding-an-mlflow-model-to-the-model-registry';
 
 export const ExperimentCliDocUrl = `${DOCS_ROOT}/cli.html#mlflow-experiments`;
 
 export const ExperimentSearchSyntaxDocUrl = `${DOCS_ROOT}/search-runs.html`;
 
-export const ExperimentTrackingDocUrl = `${DOCS_ROOT}/tracking.html`;
-
 export const PyfuncDocUrl = `${DOCS_ROOT}/python_api/mlflow.pyfunc.html`;
-export const CustomPyfuncModelsDocUrl =
-  DOCS_ROOT + '/python_api/mlflow.pyfunc.html#creating-custom-pyfunc-models';
+export const CustomPyfuncModelsDocUrl = DOCS_ROOT + '/python_api/mlflow.pyfunc.html#creating-custom-pyfunc-models';
 
 export const LoggingRunsDocUrl = `${DOCS_ROOT}/tracking.html#logging-data-to-runs`;
 
@@ -47,8 +43,6 @@ export const SupportPageUrl = 'https://github.com/mlflow/mlflow/issues';
 
 export const ModelSignatureUrl = `${DOCS_ROOT}/models.html#model-signature`;
 
-export const LogModelWithSignatureUrl =
-  DOCS_ROOT + '/models.html#how-to-log-models-with-signatures';
+export const LogModelWithSignatureUrl = DOCS_ROOT + '/models.html#how-to-log-models-with-signatures';
 
-export const mlflowAliasesLearnMoreLink =
-  'https://mlflow.org/docs/latest/model-registry.html#using-registered-model-aliases';
+export const modelStagesMigrationGuideLink = `${DOCS_ROOT}/model-registry.html#migrating-from-stages`;

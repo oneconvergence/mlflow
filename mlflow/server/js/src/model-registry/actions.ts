@@ -11,7 +11,7 @@ import { getArtifactContent } from '../common/utils/ArtifactUtils';
 import yaml from 'js-yaml';
 import type { KeyValueEntity, ModelVersionInfoEntity } from '../experiment-tracking/types';
 
-export const CREATE_REGISTERED_MODEL = 'CREATE_REGISTERED_MODEL';
+const CREATE_REGISTERED_MODEL = 'CREATE_REGISTERED_MODEL';
 // @ts-expect-error TS(7006): Parameter 'name' implicitly has an 'any' type.
 export const createRegisteredModelApi = (name, id = getUUID()) => ({
   type: CREATE_REGISTERED_MODEL,
@@ -21,10 +21,10 @@ export const createRegisteredModelApi = (name, id = getUUID()) => ({
 
 export const SEARCH_REGISTERED_MODELS = 'SEARCH_REGISTERED_MODELS';
 export const searchRegisteredModelsApi = (
-  filter: any,
-  maxResults: any,
-  orderBy: any,
-  pageToken: any,
+  filter?: any,
+  maxResults?: any,
+  orderBy?: any,
+  pageToken?: any,
   id = getUUID(),
 ) => {
   return {
@@ -39,7 +39,7 @@ export const searchRegisteredModelsApi = (
   };
 };
 
-export const UPDATE_REGISTERED_MODEL = 'UPDATE_REGISTERED_MODEL';
+const UPDATE_REGISTERED_MODEL = 'UPDATE_REGISTERED_MODEL';
 // @ts-expect-error TS(7006): Parameter 'name' implicitly has an 'any' type.
 export const updateRegisteredModelApi = (name, description, id = getUUID()) => ({
   type: UPDATE_REGISTERED_MODEL,
@@ -93,11 +93,11 @@ export const deleteRegisteredModelTagApi = (modelName, key, id = getUUID()) => (
   meta: { id, modelName, key },
 });
 
-export const CREATE_MODEL_VERSION = 'CREATE_MODEL_VERSION';
+const CREATE_MODEL_VERSION = 'CREATE_MODEL_VERSION';
 // @ts-expect-error TS(7006): Parameter 'name' implicitly has an 'any' type.
-export const createModelVersionApi = (name, source, runId, id = getUUID()) => ({
+export const createModelVersionApi = (name, source, runId, tags: any[] = [], id = getUUID()) => ({
   type: CREATE_MODEL_VERSION,
-  payload: Services.createModelVersion({ name, source, run_id: runId }),
+  payload: Services.createModelVersion({ name, source, run_id: runId, tags }),
   meta: { id, name, runId },
 });
 
@@ -117,12 +117,7 @@ export const getModelVersionArtifactApi = (modelName: any, version: any, id = ge
 // pass `null` to the `parseMlModelFile` API when we failed to fetch the
 // file from DBFS. This will ensure requestId is registered in redux `apis` state
 export const PARSE_MLMODEL_FILE = 'PARSE_MLMODEL_FILE';
-export const parseMlModelFile = (
-  modelName: any,
-  version: any,
-  mlModelFile: any,
-  id = getUUID(),
-) => {
+export const parseMlModelFile = (modelName: any, version: any, mlModelFile: any, id = getUUID()) => {
   if (mlModelFile) {
     try {
       const parsedMlModelFile = yaml.safeLoad(mlModelFile);
@@ -132,6 +127,7 @@ export const parseMlModelFile = (
         meta: { id, modelName, version },
       };
     } catch (error) {
+      // eslint-disable-next-line no-console -- TODO(FEINF-3587)
       console.error(error);
       return {
         type: PARSE_MLMODEL_FILE,
@@ -169,7 +165,7 @@ export const resolveFilterValue = (value: any, includeWildCard = false) => {
 };
 
 export const SEARCH_MODEL_VERSIONS = 'SEARCH_MODEL_VERSIONS';
-export const searchModelVersionsApi = (filterObj: any, id = getUUID()) => {
+export const searchModelVersionsApi = (filterObj: any, id = getUUID(), maxResults: number | undefined = undefined) => {
   const filter = Object.keys(filterObj)
     .map((key) => {
       if (Array.isArray(filterObj[key]) && filterObj[key].length > 1) {
@@ -182,14 +178,21 @@ export const searchModelVersionsApi = (filterObj: any, id = getUUID()) => {
     })
     .join('&');
 
+  const reqBody: any = {
+    filter,
+  };
+  if (maxResults) {
+    reqBody['max_results'] = maxResults;
+  }
+
   return {
     type: SEARCH_MODEL_VERSIONS,
-    payload: Services.searchModelVersions({ filter }),
+    payload: Services.searchModelVersions(reqBody),
     meta: { id },
   };
 };
 
-export const UPDATE_MODEL_VERSION = 'UPDATE_MODEL_VERSION';
+const UPDATE_MODEL_VERSION = 'UPDATE_MODEL_VERSION';
 // @ts-expect-error TS(7006): Parameter 'modelName' implicitly has an 'any' type... Remove this comment to see the full error message
 export const updateModelVersionApi = (modelName, version, description, id = getUUID()) => ({
   type: UPDATE_MODEL_VERSION,
@@ -296,7 +299,7 @@ export const deleteModelVersionTagApi = (modelName, version, key, id = getUUID()
   meta: { id, modelName, version, key },
 });
 
-export const SET_MODEL_VERSION_ALIASES = 'SET_MODEL_VERSION_ALIASES';
+const SET_MODEL_VERSION_ALIASES = 'SET_MODEL_VERSION_ALIASES';
 
 export const setModelVersionAliasesApi = (
   modelName: string,
@@ -313,9 +316,7 @@ export const setModelVersionAliasesApi = (
 
   // Fire all requests at once
   const updateRequests = Promise.all([
-    ...addedAliases.map((newAlias) =>
-      Services.setModelVersionAlias({ alias: newAlias, name: modelName, version }),
-    ),
+    ...addedAliases.map((newAlias) => Services.setModelVersionAlias({ alias: newAlias, name: modelName, version })),
     ...deletedAliases.map((deletedAlias) =>
       Services.deleteModelVersionAlias({ alias: deletedAlias, name: modelName, version }),
     ),
@@ -328,7 +329,6 @@ export const setModelVersionAliasesApi = (
   };
 };
 
-export const UPDATE_MODEL_VERSION_TAGS = 'UPDATE_MODEL_VERSION_TAGS';
 export const updateModelVersionTagsApi = (
   { name, version }: ModelVersionInfoEntity,
   existingTags: KeyValueEntity[],
@@ -348,15 +348,12 @@ export const updateModelVersionTagsApi = (
 
   // Next, determine those to be deleted
   const deletedTags = existingTags.filter(
-    ({ key: existingTagKey }) =>
-      !newTags.some(({ key: newTagKey }) => existingTagKey === newTagKey),
+    ({ key: existingTagKey }) => !newTags.some(({ key: newTagKey }) => existingTagKey === newTagKey),
   );
 
   // Fire all requests at once
   const updateRequests = Promise.all([
-    ...addedOrModifiedTags.map(({ key, value }) =>
-      Services.setModelVersionTag({ name, version, key, value }),
-    ),
+    ...addedOrModifiedTags.map(({ key, value }) => Services.setModelVersionTag({ name, version, key, value })),
     ...deletedTags.map(({ key }) => Services.deleteModelVersionTag({ name, version, key })),
   ]);
 

@@ -3,8 +3,8 @@ import {
   CopyIcon,
   Input,
   Modal,
-  TabPane,
-  Tabs,
+  LegacyTabPane,
+  LegacyTabs,
   Typography,
   useDesignSystemTheme,
 } from '@databricks/design-system';
@@ -20,12 +20,10 @@ type Props = {
 
 const SNIPPET_LINE_HEIGHT = 18;
 
-export const CreateNotebookRunModal = ({
-  isOpen,
-  closeModal,
-  experimentId,
-}: Props): JSX.Element => {
+export const CreateNotebookRunModal = ({ isOpen, closeModal, experimentId }: Props): JSX.Element => {
   const { theme } = useDesignSystemTheme();
+
+  const codeSnippetTheme = theme.isDarkMode ? 'duotoneDark' : 'light';
 
   const classical_ml_text = `
 import mlflow
@@ -52,6 +50,8 @@ predictions = rf.predict(X_test)
   const llm_text = `
 import mlflow
 import openai
+import os
+import pandas as pd
 
 # you must set the OPENAI_API_KEY environment variable
 assert (
@@ -73,8 +73,8 @@ mlflow.log_param("system_prompt", system_prompt)
 # Create a question answering model using prompt engineering
 # with OpenAI. Log the model to MLflow Tracking
 logged_model = mlflow.openai.log_model(
-    model="gpt-3.5-turbo",
-    task=openai.ChatCompletion,
+    model="gpt-4o-mini",
+    task=openai.chat.completions,
     artifact_path="model",
     messages=[
         {"role": "system", "content": system_prompt},
@@ -106,54 +106,49 @@ mlflow.end_run()
 
   // Calculate stable height for the code snippet UI area, based on the line count of the shortest one
   const snippetHeight =
-    (Math.min(...[classical_ml_text, llm_text].map((text) => text.split('\n').length)) + 1) *
-    SNIPPET_LINE_HEIGHT;
+    (Math.min(...[classical_ml_text, llm_text].map((text) => text.split('\n').length)) + 1) * SNIPPET_LINE_HEIGHT;
 
   return (
     <Modal
+      componentId="codegen_mlflow_app_src_experiment-tracking_components_evaluation-artifacts-compare_createnotebookrunmodal.tsx_111"
       visible={isOpen}
       onCancel={closeModal}
       onOk={closeModal}
       footer={
         <div css={{ display: 'flex', gap: theme.spacing.sm, justifyContent: 'flex-end' }}>
-          <Button onClick={closeModal} type='primary'>
+          <Button
+            componentId="codegen_mlflow_app_src_experiment-tracking_components_evaluation-artifacts-compare_createnotebookrunmodal.tsx_117"
+            onClick={closeModal}
+            type="primary"
+          >
             <FormattedMessage
-              defaultMessage='Okay'
-              description='Experiment page > new notebook run modal > okay button label'
+              defaultMessage="Okay"
+              description="Experiment page > new notebook run modal > okay button label"
             />
           </Button>
         </div>
       }
       title={
         <div>
-          <Typography.Title
-            level={2}
-            css={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing.xs }}
-          >
+          <Typography.Title level={2} css={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing.xs }}>
             <FormattedMessage
-              defaultMessage='New run using notebook'
-              description='Experiment page > new notebook run modal > modal title'
+              defaultMessage="New run using notebook"
+              description="Experiment page > new notebook run modal > modal title"
             />
           </Typography.Title>
-          <Typography.Hint css={{ marginTop: 0, fontWeight: 'normal' }}>
-            {codeSnippetMessage()}
-          </Typography.Hint>
+          <Typography.Hint css={{ marginTop: 0, fontWeight: 'normal' }}>{codeSnippetMessage()}</Typography.Hint>
         </div>
       }
     >
-      <Tabs>
-        <TabPane
-          tab={
-            <FormattedMessage
-              defaultMessage='Classical ML'
-              description='Example text snippet for classical ML'
-            />
-          }
-          key='classical-ml'
+      <LegacyTabs>
+        <LegacyTabPane
+          tab={<FormattedMessage defaultMessage="Classical ML" description="Example text snippet for classical ML" />}
+          key="classical-ml"
         >
           <CodeSnippet
             style={{ padding: '5px', height: snippetHeight }}
-            language='python'
+            language="python"
+            theme={codeSnippetTheme}
             actions={
               <div
                 style={{
@@ -167,14 +162,15 @@ mlflow.end_run()
           >
             {classical_ml_text}
           </CodeSnippet>
-        </TabPane>
-        <TabPane
-          tab={<FormattedMessage defaultMessage='LLM' description='Example text snippet for LLM' />}
-          key='llm'
+        </LegacyTabPane>
+        <LegacyTabPane
+          tab={<FormattedMessage defaultMessage="LLM" description="Example text snippet for LLM" />}
+          key="llm"
         >
           <CodeSnippet
             style={{ padding: '5px', height: snippetHeight }}
-            language='python'
+            language="python"
+            theme={codeSnippetTheme}
             actions={
               <div
                 style={{
@@ -188,8 +184,8 @@ mlflow.end_run()
           >
             {llm_text}
           </CodeSnippet>
-        </TabPane>
-      </Tabs>
+        </LegacyTabPane>
+      </LegacyTabs>
     </Modal>
   );
 };
