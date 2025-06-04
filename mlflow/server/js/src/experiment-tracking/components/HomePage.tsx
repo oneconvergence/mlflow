@@ -17,6 +17,7 @@ import Utils from '../../common/utils/Utils';
 import { ExperimentEntity } from '../types';
 import Routes from '../routes';
 import { ExperimentPage } from './experiment-page/ExperimentPage';
+import  { filterExperimentsByProject } from './ProjectListView';
 
 const getExperimentActions = {
   setExperimentTagApi,
@@ -25,8 +26,13 @@ const getExperimentActions = {
 };
 
 const getFirstActiveExperiment = (experiments: ExperimentEntity[]) => {
-  const sorted = [...experiments].sort(Utils.compareExperiments);
-  return sorted.find(({ lifecycleStage }) => lifecycleStage === 'active');
+  const selectedProject = localStorage.getItem('mlflow-exp-project');
+  let filteredExperiments = experiments
+  if(selectedProject){
+    filteredExperiments = filterExperimentsByProject(experiments, selectedProject);
+  }
+  const sorted = [...filteredExperiments].sort(Utils.compareExperiments);
+  return sorted.find(({ lifecycleStage }) => lifecycleStage === 'active' );
 };
 
 const HomePage = () => {

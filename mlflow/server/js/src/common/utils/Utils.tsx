@@ -781,7 +781,8 @@ class Utils {
     // @ts-expect-error TS(2345): Argument of type 'string | string[] | ParsedQs | P... Remove this comment to see the full error message
     const lineSmoothness = params['line_smoothness'] ? parseFloat(params['line_smoothness']) : 0;
     // @ts-expect-error TS(2345): Argument of type 'string | string[] | ParsedQs | P... Remove this comment to see the full error message
-    const layout = params['plot_layout'] ? JSON.parse(params['plot_layout']) : { autosize: true };
+    const layoutStr = params['plot_layout'] ? params['plot_layout'].replaceAll(" ","") : undefined
+    const layout = layoutStr ? JSON.parse(layoutStr) : { autosize: true };
     // Default to displaying all runs, i.e. to deselectedCurves being empty
     const deselectedCurves = params['deselected_curves']
       ? // @ts-expect-error TS(2345): Argument of type 'string | string[] | ParsedQs | P... Remove this comment to see the full error message

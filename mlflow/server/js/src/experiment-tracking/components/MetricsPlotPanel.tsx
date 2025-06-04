@@ -32,7 +32,7 @@ export const METRICS_PLOT_POLLING_INTERVAL_MS = 10 * 1000; // 10 seconds
 // A run is considered as 'hanging' if its status is 'RUNNING' but its latest metric was logged
 // prior to this threshold. The metrics plot doesn't automatically update hanging runs.
 export const METRICS_PLOT_HANGING_RUN_THRESHOLD_MS = 3600 * 24 * 7 * 1000; // 1 week
-const MAXIMUM_METRIC_DATA_POINTS = 100_000;
+const MAXIMUM_METRIC_DATA_POINTS = 1_000_000;
 const GET_METRIC_HISTORY_MAX_RESULTS = 25000;
 
 export const convertMetricsToCsv = (metrics: any) => {

@@ -64,7 +64,8 @@ export const getSampledMetricHistoryBulkAction =
         // - were not initialized before
         // - have fresh data
         // - are being loaded already
-        return !isInitialized || isFresh || isLoadingOrRefreshing;
+        // return !isInitialized || isFresh || isLoadingOrRefreshing;
+        return false;
       }
 
       // If refresh mode is unset, skip runs that we already have data for

@@ -7,9 +7,18 @@ import {
   Spacer,
   Spinner,
   useDesignSystemTheme,
+  DialogCombobox,
+  DialogComboboxContent,
+  DialogComboboxOptionList,
+  DialogComboboxOptionListCheckboxItem,
+  DialogComboboxOptionListSelectItem,
+  DialogComboboxOptionListSearch,
+  DialogComboboxTrigger,
+  Switch,
 } from '@databricks/design-system';
+import Fuse from 'fuse.js';
 import { compact, mapValues, values } from 'lodash';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { FormattedMessage, defineMessages, useIntl } from 'react-intl';
 import { useSelector } from 'react-redux';
 import { getGridColumnSetup } from '../../../common/utils/CssGrid.utils';
@@ -45,28 +54,32 @@ const EmptyMetricsFiltered = () => (
 const EmptyMetricsNotRecorded = ({ label }: { label: React.ReactNode }) => <Empty title={label} description={null} />;
 
 const metricKeyMatchesFilter = (filter: string, metricKey: string) =>
-  metricKey.toLowerCase().startsWith(filter.toLowerCase()) ||
-  normalizeChartMetricKey(metricKey).toLowerCase().startsWith(filter.toLowerCase());
+  metricKey.toLowerCase().includes(filter.toLowerCase()) ||
+  normalizeChartMetricKey(metricKey).toLowerCase().includes(filter.toLowerCase());
 
 /**
  * Internal component that displays a single collapsible section with charts
  */
 const RunViewMetricChartsSection = ({
   metricKeys,
+  filteredMetricKeys,
   search,
   runInfo,
   chartRefreshManager,
   onReorderChart,
+  maxResults,
+  showPoint,
 }: {
   metricKeys: string[];
+  filteredMetricKeys: string[];
   search: string;
   runInfo: RunInfoEntity | UseGetRunQueryResponseRunInfo;
   onReorderChart: (sourceChartKey: string, targetChartKey: string) => void;
   chartRefreshManager: ChartRefreshManager;
+  maxResults: number;
+  showPoint: boolean;
 }) => {
   const { theme } = useDesignSystemTheme();
-
-  const filteredMetricKeys = metricKeys.filter((metricKey) => metricKeyMatchesFilter(search, metricKey));
 
   const { canMoveDown, canMoveUp, moveChartDown, moveChartUp } = useChartMoveUpDownFunctions(
     filteredMetricKeys,
@@ -76,13 +89,13 @@ const RunViewMetricChartsSection = ({
   const gridSetup = useMemo(
     () => ({
       ...getGridColumnSetup({
-        maxColumns: 3,
+        maxColumns: maxResults > 320 ? 1 : 3,
         gap: theme.spacing.lg,
         additionalBreakpoints: [{ breakpointWidth: 3 * 720, minColumnWidthForBreakpoint: 720 }],
       }),
       overflow: 'hidden',
     }),
-    [theme],
+    [theme, maxResults],
   );
 
   return filteredMetricKeys.length ? (
@@ -101,6 +114,8 @@ const RunViewMetricChartsSection = ({
           onMoveDown={() => moveChartDown(metricKey)}
           onMoveUp={() => moveChartUp(metricKey)}
           chartRefreshManager={chartRefreshManager}
+          maxResults={maxResults}
+          showPoint={showPoint}
         />
       ))}
     </div>
@@ -137,13 +152,35 @@ export const RunViewMetricCharts = ({
   });
 
   const [search, setSearch] = useState('');
+  const prevSample = localStorage.getItem('mlflow-run-chart-default-samples') || "320"
+  const [maxSteps, setMaxSteps] = useState(parseInt(prevSample));
+  const [showPoint, setShowPoint] = useState(false);
   const { formatMessage } = useIntl();
-
+  const maxSamples = [320, 500, 1000, 2500]
   const { orderedMetricKeys, onReorderChart } = useOrderedCharts(metricKeys, 'RunView' + mode, runInfo.runUuid ?? '');
 
+  // Setting up Fuse for Fuzzy Searching
+  const fuseOptions = {
+    includeScore: true,
+    minMatchCharLength: 1, // Allows matching on single characters
+    threshold: 0.6, // Adjust for stricter or more lenient matching
+    shouldSort: true, // Prioritizes results by relevance
+    matchAllTokens: true, // Ensures each keyword is matched somewhere in the string
+    findAllMatches: true, // Matches even partial matches anywhere in the string
+    useExtendedSearch: true // Allows partial matches within substrings
+  };
+
+  const fuse = new Fuse(metricKeys, fuseOptions);
+
+  // Prepare the extended search pattern
+  const searchTerms = search.split(" ").filter(Boolean); // Split by spaces and remove empty items
+  const extendedSearchPattern = searchTerms.map(term => `"'${term}"`).join(" ");
+
+  const filteredMetricKeys = search && search !== '' ? fuse.search(extendedSearchPattern).map((item) => item.item) : metricKeys;
+
   const noMetricsRecorded = !metricKeys.length;
-  const allMetricsFilteredOut =
-    !noMetricsRecorded && !metricKeys.some((metricKey) => metricKeyMatchesFilter(search, metricKey));
+  const allMetricsFilteredOut = !filteredMetricKeys.length;
+
   const showConfigArea = !noMetricsRecorded;
   const { theme } = useDesignSystemTheme();
   const showCharts = !noMetricsRecorded && !allMetricsFilteredOut;
@@ -155,6 +192,11 @@ export const RunViewMetricCharts = ({
       values(metricsByRange).some(({ refreshing }) => refreshing),
     );
   });
+
+  // on samples to render change, refresh all charts
+  useEffect(() => {
+    chartRefreshManager.refreshAllCharts();
+  }, [maxSteps]);
 
   return (
     <DragAndDropProvider>
@@ -173,6 +215,49 @@ export const RunViewMetricCharts = ({
                   description: 'Run page > Charts tab > Filter metric charts input > placeholder',
                 })}
               />
+              <DialogCombobox
+                label={formatMessage({
+                  defaultMessage: 'Samples',
+                  description: 'Number of Samples to render',
+                })}
+                value={[maxSteps.toString()]}
+              >
+                <DialogComboboxTrigger allowClear={false} data-testid="max-samples" />
+                <DialogComboboxContent>
+                  <DialogComboboxOptionList>
+                    {maxSamples.map((sample) => {
+                      return (
+                        <DialogComboboxOptionListSelectItem
+                          checked={maxSteps === sample}
+                          key={sample}
+                          data-testid={'max-samples-' + sample}
+                          value={sample.toString()}
+                          onChange={() => {
+                            setMaxSteps(sample);
+                            localStorage.setItem('mlflow-run-chart-default-samples', sample.toString());
+                          }}
+                        >
+                          {sample}
+                        </DialogComboboxOptionListSelectItem>
+                      );
+                    })}
+                  </DialogComboboxOptionList>
+                </DialogComboboxContent>
+              </DialogCombobox>
+              <div css={{ display: 'flex', gap: theme.spacing.sm, alignItems: 'center' }}>
+                <div>
+                  <FormattedMessage
+                    defaultMessage="Points:"
+                    // eslint-disable-next-line max-len
+                    description="Label for the toggle button to toggle to show points or not for the metric experiment run"
+                  />
+                </div>
+                <Switch
+                  data-testid="show-point-toggle"
+                  defaultChecked={showPoint}
+                  onChange={() => setShowPoint(!showPoint)}
+                />
+              </div>
               <Button
                 componentId="codegen_mlflow_app_src_experiment-tracking_components_run-page_runviewmetriccharts.tsx_176"
                 icon={
@@ -205,10 +290,13 @@ export const RunViewMetricCharts = ({
             {showCharts && (
               <RunViewMetricChartsSection
                 metricKeys={orderedMetricKeys}
+                filteredMetricKeys={filteredMetricKeys}
                 runInfo={runInfo}
                 search={search}
                 onReorderChart={onReorderChart}
                 chartRefreshManager={chartRefreshManager}
+                maxResults={maxSteps}
+                showPoint={showPoint}
               />
             )}
           </RunsChartsTooltipWrapper>
