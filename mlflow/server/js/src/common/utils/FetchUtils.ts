@@ -52,11 +52,15 @@ export const getDefaultHeaders = (cookieStr: any) => {
 };
 
 export const getAjaxUrl = (relativeUrl: any) => {
+<<<<<<< Updated upstream
   // @ts-expect-error TS(4111): Property 'MLFLOW_USE_ABSOLUTE_AJAX_URLS' comes from an in... Remove this comment to see the full error message
   if (process.env.MLFLOW_USE_ABSOLUTE_AJAX_URLS === 'true' && !relativeUrl.startsWith('/')) {
     return '/' + relativeUrl;
   }
   return relativeUrl;
+=======
+  return '/mlflow/' + relativeUrl;
+>>>>>>> Stashed changes
 };
 
 // return response json by default, if response is not parsable to json,

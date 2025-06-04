@@ -22,6 +22,7 @@ import { DeleteExperimentModal } from './modals/DeleteExperimentModal';
 import { RenameExperimentModal } from './modals/RenameExperimentModal';
 import { withRouterNext, WithRouterNextProps } from '../../common/utils/withRouterNext';
 import { ExperimentEntity } from '../types';
+import ProjectListView, { filterExperimentsByProject } from './ProjectListView';
 
 type Props = {
   activeExperimentIds: string[];
@@ -41,12 +42,13 @@ type State = {
 };
 
 export class ExperimentListView extends Component<Props, State> {
-  list?: VList = undefined;
-
+  list: any;
+  selectedExperiments: string[] = JSON.parse(localStorage.getItem('selected-experiments') || '[]');
   state = {
-    checkedKeys: this.props.activeExperimentIds,
+    checkedKeys: JSON.parse(localStorage.getItem('selected-experiments') || '[]'),
     hidden: false,
     searchInput: '',
+    project: localStorage.getItem('mlflow-exp-project') || 'All',
     showCreateExperimentModal: false,
     showDeleteExperimentModal: false,
     showRenameExperimentModal: false,
@@ -58,19 +60,23 @@ export class ExperimentListView extends Component<Props, State> {
     this.list = ref;
   };
 
-  componentDidUpdate = () => {
+  componentDidUpdate = (prevProps: Props) => {
     // Ensure the filter is applied
     if (this.list) {
       this.list.forceUpdateGrid();
     }
-  };
+    const exps = JSON.parse(localStorage.getItem('selected-experiments') || '[]');
+    if (prevProps.activeExperimentIds.length !== exps.length) {
+      this.pushExperimentRoute();
+    }
+  }
 
-  filterExperiments = (searchInput: string) => {
-    const { experiments } = this.props;
+  filterExperiments = (searchInput: any) => {
+    const experiments = filterExperimentsByProject(this.props.experiments, this.state.project)
     const lowerCasedSearchInput = searchInput.toLowerCase();
     return lowerCasedSearchInput === ''
-      ? this.props.experiments
-      : experiments.filter(({ name }) => name.toLowerCase().includes(lowerCasedSearchInput));
+      ? experiments
+      : experiments.filter(({ name }: any) => name.toLowerCase().includes(lowerCasedSearchInput));
   };
 
   handleSearchInputChange: React.ChangeEventHandler<HTMLInputElement> = (event) => {
@@ -79,7 +85,15 @@ export class ExperimentListView extends Component<Props, State> {
     });
   };
 
-  updateSelectedExperiment = (experimentId: string, experimentName: string) => {
+  handleProjectChange = (value: any) => {
+    const experiments = filterExperimentsByProject(this.props.experiments, value)
+    localStorage.setItem('mlflow-exp-project', value);
+    this.setState((prevState: any, props: any) => {
+      return {project: value, checkedKeys: experiments.length ?[experiments[0].experiment_id] : [] };
+    }, this.pushExperimentRoute);
+  };
+
+  updateSelectedExperiment = (experimentId: any, experimentName: any) => {
     this.setState({
       selectedExperimentId: experimentId,
       selectedExperimentName: experimentName,
@@ -144,6 +158,7 @@ export class ExperimentListView extends Component<Props, State> {
   };
 
   pushExperimentRoute = () => {
+    this.persistSelectedExperiemnts(this.state.checkedKeys);
     if (this.state.checkedKeys.length > 0) {
       const route =
         this.state.checkedKeys.length === 1
@@ -285,6 +300,8 @@ export class ExperimentListView extends Component<Props, State> {
           experimentId={this.state.selectedExperimentId}
           experimentName={this.state.selectedExperimentName}
         />
+        <div>
+        <ProjectListView experiments={this.props.experiments} project={this.state.project} handleProjectChange={this.handleProjectChange}/>	
         <div
           css={{
             display: 'flex',
@@ -317,6 +334,7 @@ export class ExperimentListView extends Component<Props, State> {
             </Tooltip>
           </div>
         </div>
+	</div>
         <Input
           componentId="mlflow.experiment_list_view.search_input"
           placeholder="Search experiments"

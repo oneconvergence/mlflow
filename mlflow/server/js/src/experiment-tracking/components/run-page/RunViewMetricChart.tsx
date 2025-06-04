@@ -12,6 +12,8 @@ export interface RunViewMetricChartProps {
   runInfo: RunInfoEntity;
   metricsHistory: MetricHistoryByName;
   isLoading: boolean;
+  maxResults: number;
+  showPoint: boolean;
 }
 
 /**
@@ -102,6 +104,8 @@ export const RunViewMetricChart = ({
   runInfo,
   metricsHistory,
   isLoading,
+  maxResults,
+  showPoint
 }: RunViewMetricChartProps) => {
   const loaded = metricsHistory?.[metricKey] && !isLoading;
   const isSingleMetricEntry = loaded && metricsHistory?.[metricKey].length === 1;
@@ -148,6 +152,7 @@ export const RunViewMetricChart = ({
         metricKey={metricKey}
         metricsHistory={metricsHistory}
         runInfo={runInfo}
+	showPoint={showPoint}
       />
     );
   };
