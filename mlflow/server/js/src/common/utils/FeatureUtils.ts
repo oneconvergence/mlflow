@@ -63,6 +63,8 @@ export const isUnstableNestedComponentsMigrated = () => true;
  */
 export const isExperimentLoggedModelsUIEnabled = () => false;
 
+export const shouldEnableExperimentDatasetTracking = () => false;
+
 /**
  * Determines if evaluation results online monitoring UI is enabled
  */

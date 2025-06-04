@@ -142,6 +142,10 @@ export class ExperimentListView extends Component<Props, State> {
     this.updateSelectedExperiment('0', '');
   };
 
+  persistSelectedExperiemnts = (selected: any) => {
+    localStorage.setItem('selected-experiments', JSON.stringify(selected));
+  }
+
   // Add a key if it does not exist, remove it if it does
   // Always keep at least one experiment checked if it is only the active one.
   handleCheck = (isChecked: boolean, key: string) => {
