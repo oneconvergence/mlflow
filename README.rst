@@ -230,7 +230,9 @@ Running MLFLOW Locally
     ``yarn install``
 4. **Add Proxy in package.json**
     ``"proxy": "your.domain.and.port"``
-5. **Modify FetchUtils.js**
+5. **Login to dkubex and add _oauth2_proxy in cookies**
+    ``_oauth2_proxy: <_oauth2_proxy cookie from dkubex user>``
+6. **Modify FetchUtils.js**
     - Navigate to ``mlflow/server/js/src/common/utils/FetchUtils.js``
     - Update the getAjaxUrl function as follows:
 
@@ -244,6 +246,6 @@ Running MLFLOW Locally
      return '/mlflow/' + relativeUrl;
    };
 
-6. **Start the Application**
+7. **Start the Application**
     ``npm start``
 
