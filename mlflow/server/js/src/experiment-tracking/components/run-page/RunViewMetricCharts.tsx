@@ -2,14 +2,6 @@ import {
   TableSkeleton,
   ToggleButton,
   useDesignSystemTheme,
-  DialogCombobox,
-  DialogComboboxContent,
-  DialogComboboxOptionList,
-  DialogComboboxOptionListCheckboxItem,
-  DialogComboboxOptionListSelectItem,
-  DialogComboboxOptionListSearch,
-  DialogComboboxTrigger,
-  Switch,
 } from '@databricks/design-system';
 import { compact, mapValues, values } from 'lodash';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
@@ -82,6 +74,9 @@ const RunViewMetricChartsImpl = ({
 }) => {
   const { theme } = useDesignSystemTheme();
   const [search, setSearch] = useState('');
+  const prevSample = localStorage.getItem('mlflow-run-chart-default-samples') || '320'
+  const [maxSteps, setMaxSteps] = useState(parseInt(prevSample));
+  const [showPoint, setShowPoint] = useState(false);
   const { formatMessage } = useIntl();
 
   const { compareRunCharts, compareRunSections, chartsSearchFilter } = chartUIState;

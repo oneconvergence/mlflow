@@ -143,6 +143,8 @@ export const RunViewMetricChart = ({
         <RunViewMetricSingleValueChart
           metricKey={metricKey}
           metricsHistory={metricsHistory}
+          showPoint={showPoint}
+          maxResults={maxResults}
           runInfo={runInfo}
         />
       );
@@ -152,7 +154,8 @@ export const RunViewMetricChart = ({
         metricKey={metricKey}
         metricsHistory={metricsHistory}
         runInfo={runInfo}
-	showPoint={showPoint}
+	      showPoint={showPoint}
+        maxResults={maxResults}
       />
     );
   };
