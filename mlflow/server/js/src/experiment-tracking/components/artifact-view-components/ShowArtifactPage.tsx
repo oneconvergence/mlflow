@@ -15,6 +15,7 @@ import {
   PDF_EXTENSIONS,
   DATA_EXTENSIONS,
   TRACE_EXTENSIONS,
+  AUDIO_EXTENSIONS,
 } from '../../../common/utils/FileUtils';
 import { getLoggedModelPathsFromTags, getLoggedTablesFromTags } from '../../../common/utils/TagUtils';
 import { ONE_MB } from '../../constants';

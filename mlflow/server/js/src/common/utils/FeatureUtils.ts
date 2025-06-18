@@ -40,6 +40,8 @@ export const shouldEnableChartExpressions = () => false;
  */
 export const shouldEnableToggleIndividualRunsInGroups = () => false;
 
+export const shouldEnableDeepLearningUI = () => false;
+
 /**
  * Update relative time axis to use date
  */

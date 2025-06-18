@@ -42,6 +42,7 @@ import {
   createExperimentPageSearchFacetsState,
   ExperimentPageSearchFacetsState,
 } from '../../models/ExperimentPageSearchFacetsState';
+import { RUNS_VISIBILITY_MODE } from '../../../experiment-page/models/ExperimentPageUIState';
 import { useExperimentTableSelectRowHandler } from '../../hooks/useExperimentTableSelectRowHandler';
 import { useToggleRowVisibilityCallback } from '../../hooks/useToggleRowVisibilityCallback';
 import { ExperimentViewRunsTableHeaderContextProvider } from './ExperimentViewRunsTableHeaderContext';
@@ -168,7 +169,7 @@ export const ExperimentViewRunsTable = React.memo(
       onExpand: toggleRowExpanded,
       compareExperiments: experiments.length > 1,
       onTogglePin: togglePinnedRow,
-      onToggleVisibility: toggleRowVisibility,
+      onToggleVisibility: (runUuid) => toggleRowVisibility(RUNS_VISIBILITY_MODE.SHOWALL, runUuid),
       metricKeyList,
       paramKeyList,
       tagKeyList: filteredTagKeys,
@@ -176,7 +177,7 @@ export const ExperimentViewRunsTable = React.memo(
       isComparingRuns,
       onDatasetSelected,
       expandRows,
-      runsHiddenMode: uiState.runsHiddenMode,
+      allRunsHidden,
     });
 
     const gridSizeHandler = useCallback(

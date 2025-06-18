@@ -422,3 +422,5 @@ export interface SearchExperimentsApiResponse {
 export interface GetExperimentApiResponse {
   experiment: ExperimentEntity;
 }
+
+export type UpdateExperimentSearchFacetsFn = any;
