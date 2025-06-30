@@ -21,6 +21,9 @@ export const useRunViewActiveTab = (): RunPageTabName => {
   if (tabParam?.match(/^(artifactPath|artifacts)/)) {
     return RunPageTabName.ARTIFACTS;
   }
+  if (tabParam === 'logs') {
+    return RunPageTabName.LOGS;
+  }
 
   return RunPageTabName.OVERVIEW;
 };
