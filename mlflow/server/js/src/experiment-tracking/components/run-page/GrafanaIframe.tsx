@@ -9,7 +9,6 @@ interface IframeProps {
 const GrafanaIframe: React.FC<IframeProps> = ({ runUuid, width = '100%', height = '100%' }) => {
     const baseUrl = `${window.location.protocol}//${window.location.host}`;
     const src = `${baseUrl}/grafana/d/depiaxha35ds0e/mlflow-logger?orgId=1&from=now-2d&to=now&timezone=browser&var-runid=${runUuid}&var-level=$__all&var-search=&theme=dark`;
-    console.log('src', src);
     return (
         <iframe
             src={src}

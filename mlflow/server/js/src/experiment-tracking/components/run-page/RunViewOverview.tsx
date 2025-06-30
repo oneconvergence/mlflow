@@ -16,7 +16,6 @@ import { RunViewMetricsTable } from './overview/RunViewMetricsTable';
 import { RunViewDatasetBox } from './overview/RunViewDatasetBox';
 import { RunViewParentRunBox } from './overview/RunViewParentRunBox';
 import { RunViewTagsBox } from './overview/RunViewTagsBox';
-import GrafanaIframe from './GrafanaIframe';
 import { RunViewDescriptionBox } from './overview/RunViewDescriptionBox';
 import { DetailsOverviewMetadataRow } from '../DetailsOverviewMetadataRow';
 import { RunViewRegisteredModelsBox } from './overview/RunViewRegisteredModelsBox';
@@ -207,8 +206,6 @@ export const RunViewOverview = ({
         {renderParams()}
         <RunViewMetricsTable latestMetrics={latestMetrics} runInfo={runInfo} />
       </div>
-      <Typography.Title css={{ marginTop: '30px' }} level={4}>Logs</Typography.Title>
-      <GrafanaIframe runUuid={runUuid} width="100%" height="760px" />
     </div>
   );
 };
