@@ -169,7 +169,7 @@ export const ExperimentViewRunsTable = React.memo(
       onExpand: toggleRowExpanded,
       compareExperiments: experiments.length > 1,
       onTogglePin: togglePinnedRow,
-      onToggleVisibility: (runUuid) => toggleRowVisibility(RUNS_VISIBILITY_MODE.SHOWALL, runUuid),
+      onToggleVisibility: toggleRowVisibility,
       metricKeyList,
       paramKeyList,
       tagKeyList: filteredTagKeys,
@@ -177,7 +177,7 @@ export const ExperimentViewRunsTable = React.memo(
       isComparingRuns,
       onDatasetSelected,
       expandRows,
-      allRunsHidden,
+      runsHiddenMode: uiState.runsHiddenMode,
     });
 
     const gridSizeHandler = useCallback(
