@@ -13,7 +13,7 @@ export const useLineChartGlobalConfig = (
   globalLineChartConfig?: RunsChartsGlobalLineChartConfig,
 ) =>
   useMemo(() => {
-    const result = pick(originalCardConfig, ['xAxisKey', 'selectedXAxisMetricKey', 'lineSmoothness']);
+    const result = pick(originalCardConfig, ['xAxisKey', 'selectedXAxisMetricKey', 'lineSmoothness', 'displayPoints']);
 
     if (!globalLineChartConfig) {
       return result;
@@ -31,6 +31,11 @@ export const useLineChartGlobalConfig = (
       if (globalXAxisKey === RunsChartsLineChartXAxisType.METRIC && globalSelectedXAxisMetricKey) {
         result.selectedXAxisMetricKey = globalSelectedXAxisMetricKey;
       }
+    }
+
+    // Add displayPoints if available in global config
+    if (!isUndefined(globalLineChartConfig.displayPoints)) {
+      result.displayPoints = globalLineChartConfig.displayPoints;
     }
 
     // Add maxResults if available in global config

@@ -78,6 +78,8 @@ const RunViewMetricChartsImpl = ({
   tags = {},
   maxSteps,
   setMaxSteps,
+  showPoint,
+  setShowPoint,
 }: RunViewMetricChartsProps & {
   chartUIState: ExperimentRunsChartsUIConfiguration;
   updateChartsUIState: (
@@ -85,10 +87,11 @@ const RunViewMetricChartsImpl = ({
   ) => void;
   maxSteps: number;
   setMaxSteps: (value: number) => void;
+  showPoint: boolean;
+  setShowPoint: (value: boolean) => void;
 }) => {
   const { theme } = useDesignSystemTheme();
   const [search, setSearch] = useState('');
-  const [showPoint, setShowPoint] = useState(false);
   const { formatMessage } = useIntl();
   const maxSamples = [320, 500, 1000, 2500];
 
@@ -376,6 +379,7 @@ export const RunViewMetricCharts = (props: RunViewMetricChartsProps) => {
 
   const prevSample = localStorage.getItem('mlflow-run-chart-default-samples') || '320'
   const [maxSteps, setMaxSteps] = useState(parseInt(prevSample, 10));
+  const [showPoint, setShowPoint] = useState(false);
 
   const [chartUIState, updateChartsUIState] = useState<ExperimentRunsChartsUIConfiguration>(() => {
     const defaultChartState: ExperimentRunsChartsUIConfiguration = {
@@ -389,6 +393,7 @@ export const RunViewMetricCharts = (props: RunViewMetricChartsProps) => {
         lineSmoothness: 0,
         selectedXAxisMetricKey: '',
         maxResults: maxSteps,
+        displayPoints: showPoint,
       },
     };
     try {
@@ -407,20 +412,21 @@ export const RunViewMetricCharts = (props: RunViewMetricChartsProps) => {
     localStore.setItem('chartUIState', JSON.stringify(chartUIState));
   }, [chartUIState, localStore]);
 
-  // Update globalLineChartConfig when maxSteps changes
+  // Update globalLineChartConfig when maxSteps or showPoint changes
   useEffect(() => {
     updateChartsUIState((current) => ({
       ...current,
       globalLineChartConfig: {
         ...current.globalLineChartConfig,
         maxResults: maxSteps,
+        displayPoints: showPoint,
       },
     }));
-  }, [maxSteps, updateChartsUIState]);
+  }, [maxSteps, showPoint, updateChartsUIState]);
 
   return (
     <RunsChartsUIConfigurationContextProvider updateChartsUIState={updateChartsUIState}>
-      <RunViewMetricChartsImpl {...props} chartUIState={chartUIState} updateChartsUIState={updateChartsUIState} maxSteps={maxSteps} setMaxSteps={setMaxSteps} />
+      <RunViewMetricChartsImpl {...props} chartUIState={chartUIState} updateChartsUIState={updateChartsUIState} maxSteps={maxSteps} setMaxSteps={setMaxSteps} showPoint={showPoint} setShowPoint={setShowPoint} />
     </RunsChartsUIConfigurationContextProvider>
   );
 };

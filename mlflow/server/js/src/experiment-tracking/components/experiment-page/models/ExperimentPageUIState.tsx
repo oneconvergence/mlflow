@@ -47,7 +47,7 @@ export enum RUNS_VISIBILITY_MODE {
 }
 
 export type RunsChartsGlobalLineChartConfig = Partial<
-  Pick<RunsChartsLineCardConfig, 'selectedXAxisMetricKey' | 'xAxisKey' | 'lineSmoothness'> & { maxResults?: number }
+  Pick<RunsChartsLineCardConfig, 'selectedXAxisMetricKey' | 'xAxisKey' | 'lineSmoothness' | 'displayPoints'> & { maxResults?: number }
 >;
 
 /**

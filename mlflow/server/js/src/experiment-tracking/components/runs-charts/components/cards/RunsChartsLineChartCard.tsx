@@ -97,7 +97,7 @@ export const RunsChartsLineChartCard = ({
   positionInSection,
   ...reorderProps
 }: RunsChartsLineChartCardProps) => {
-  const { xAxisKey, selectedXAxisMetricKey, lineSmoothness, maxResults } = useLineChartGlobalConfig(config, globalLineChartConfig);
+  const { xAxisKey, selectedXAxisMetricKey, lineSmoothness, maxResults, displayPoints } = useLineChartGlobalConfig(config, globalLineChartConfig);
 
   const toggleFullScreenChart = useCallback(() => {
     setFullScreenChart?.({
@@ -339,7 +339,7 @@ export const RunsChartsLineChartCard = ({
           xRange={xRangeLocal}
           yRange={yRangeLocal}
           fullScreen={fullScreen}
-          displayPoints={config.displayPoints}
+          displayPoints={displayPoints}
           onSetDownloadHandler={setImageDownloadHandler}
           positionInSection={positionInSection ?? 0}
         />
