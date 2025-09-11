@@ -97,7 +97,7 @@ export const RunsChartsLineChartCard = ({
   positionInSection,
   ...reorderProps
 }: RunsChartsLineChartCardProps) => {
-  const { xAxisKey, selectedXAxisMetricKey, lineSmoothness } = useLineChartGlobalConfig(config, globalLineChartConfig);
+  const { xAxisKey, selectedXAxisMetricKey, lineSmoothness, maxResults } = useLineChartGlobalConfig(config, globalLineChartConfig);
 
   const toggleFullScreenChart = useCallback(() => {
     setFullScreenChart?.({
@@ -191,7 +191,7 @@ export const RunsChartsLineChartCard = ({
     runUuids: runUuidsToFetch,
     metricKeys,
     enabled: isInViewportDeferred,
-    maxResults: 320,
+    maxResults: maxResults || 320,
     range: stepRange,
     autoRefreshEnabled,
   });

@@ -1,11 +1,8 @@
 import {
-  Button,
   Empty,
   Input,
-  RefreshIcon,
   SearchIcon,
   Spacer,
-  Spinner,
   TableSkeleton,
   ToggleButton,
   useDesignSystemTheme,
@@ -79,16 +76,18 @@ const RunViewMetricChartsImpl = ({
   latestMetrics = {},
   params = {},
   tags = {},
+  maxSteps,
+  setMaxSteps,
 }: RunViewMetricChartsProps & {
   chartUIState: ExperimentRunsChartsUIConfiguration;
   updateChartsUIState: (
     stateSetter: (state: ExperimentRunsChartsUIConfiguration) => ExperimentRunsChartsUIConfiguration,
   ) => void;
+  maxSteps: number;
+  setMaxSteps: (value: number) => void;
 }) => {
   const { theme } = useDesignSystemTheme();
   const [search, setSearch] = useState('');
-  const prevSample = localStorage.getItem('mlflow-run-chart-default-samples') || '320'
-  const [maxSteps, setMaxSteps] = useState(parseInt(prevSample, 10));
   const [showPoint, setShowPoint] = useState(false);
   const { formatMessage } = useIntl();
   const maxSamples = [320, 500, 1000, 2500];
@@ -125,11 +124,6 @@ const RunViewMetricChartsImpl = ({
     imagesByRunUuid: state.entities.imagesByRunUuid,
   }));
 
-  const anyRunRefreshing = useSelector((store: ReduxState) => {
-    return values(store.entities.sampledMetricsByRunUuid[runInfo.runUuid ?? '']).some((metricsByRange) =>
-      values(metricsByRange).some(({ refreshing }) => refreshing),
-    );
-  });
 
   const [configuredCardConfig, setConfiguredCardConfig] = useState<RunsChartsCardConfig | null>(null);
 
@@ -153,12 +147,6 @@ const RunViewMetricChartsImpl = ({
     setConfiguredCardConfig(null);
   };
 
-  // Refresh function for charts
-  const refreshCharts = () => {
-    // This would trigger a refresh of all charts
-    // For now, we'll just do nothing since the actual refresh logic depends on the chart implementation
-    // TODO: Implement actual chart refresh logic
-  };
 
   // Create a single run data object to be used in charts
   const chartData: RunsChartsRunData[] = useMemo(
@@ -305,22 +293,6 @@ const RunViewMetricChartsImpl = ({
             onChange={() => setShowPoint(!showPoint)}
           />
         </div>
-        <Button
-          componentId="codegen_mlflow_app_src_experiment-tracking_components_run-page_runviewmetriccharts.tsx_176"
-          icon={
-            anyRunRefreshing ? <Spinner size="small" /> : <RefreshIcon />
-          }
-          onClick={() => {
-            if (!anyRunRefreshing) {
-              refreshCharts();
-            }
-          }}
-        >
-          <FormattedMessage
-            defaultMessage="Refresh"
-            description="Run page > Charts tab > Refresh all charts button label"
-          />
-        </Button>
         {shouldEnableRunDetailsPageAutoRefresh() && (
           <ToggleButton
             componentId="codegen_mlflow_app_src_experiment-tracking_components_run-page_runviewmetricchartsv2.tsx_244"
@@ -402,6 +374,9 @@ export const RunViewMetricCharts = (props: RunViewMetricChartsProps) => {
     [persistenceIdentifier],
   );
 
+  const prevSample = localStorage.getItem('mlflow-run-chart-default-samples') || '320'
+  const [maxSteps, setMaxSteps] = useState(parseInt(prevSample, 10));
+
   const [chartUIState, updateChartsUIState] = useState<ExperimentRunsChartsUIConfiguration>(() => {
     const defaultChartState: ExperimentRunsChartsUIConfiguration = {
       isAccordionReordered: false,
@@ -413,6 +388,7 @@ export const RunViewMetricCharts = (props: RunViewMetricChartsProps) => {
         xAxisKey: RunsChartsLineChartXAxisType.STEP,
         lineSmoothness: 0,
         selectedXAxisMetricKey: '',
+        maxResults: maxSteps,
       },
     };
     try {
@@ -431,9 +407,20 @@ export const RunViewMetricCharts = (props: RunViewMetricChartsProps) => {
     localStore.setItem('chartUIState', JSON.stringify(chartUIState));
   }, [chartUIState, localStore]);
 
+  // Update globalLineChartConfig when maxSteps changes
+  useEffect(() => {
+    updateChartsUIState((current) => ({
+      ...current,
+      globalLineChartConfig: {
+        ...current.globalLineChartConfig,
+        maxResults: maxSteps,
+      },
+    }));
+  }, [maxSteps, updateChartsUIState]);
+
   return (
     <RunsChartsUIConfigurationContextProvider updateChartsUIState={updateChartsUIState}>
-      <RunViewMetricChartsImpl {...props} chartUIState={chartUIState} updateChartsUIState={updateChartsUIState} />
+      <RunViewMetricChartsImpl {...props} chartUIState={chartUIState} updateChartsUIState={updateChartsUIState} maxSteps={maxSteps} setMaxSteps={setMaxSteps} />
     </RunsChartsUIConfigurationContextProvider>
   );
 };

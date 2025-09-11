@@ -33,5 +33,10 @@ export const useLineChartGlobalConfig = (
       }
     }
 
+    // Add maxResults if available in global config
+    if (!isUndefined(globalLineChartConfig.maxResults)) {
+      (result as any).maxResults = globalLineChartConfig.maxResults;
+    }
+
     return result;
   }, [originalCardConfig, globalLineChartConfig]);

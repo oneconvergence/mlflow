@@ -75,7 +75,7 @@ const RunsChartsConfigureLineChartPreviewImpl = ({
     runUuids: runUuidsToFetch,
     metricKeys: metricKeysToFetch,
     enabled: true,
-    maxResults: 320,
+    maxResults: globalLineChartConfig?.maxResults || 320,
     autoRefreshEnabled: false,
   });
 
