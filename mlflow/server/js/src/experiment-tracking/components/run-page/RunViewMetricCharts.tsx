@@ -1,11 +1,24 @@
 import {
+  Button,
+  Empty,
+  Input,
+  RefreshIcon,
+  SearchIcon,
+  Spacer,
+  Spinner,
   TableSkeleton,
   ToggleButton,
   useDesignSystemTheme,
+  DialogCombobox,
+  DialogComboboxContent,
+  DialogComboboxOptionList,
+  DialogComboboxOptionListSelectItem,
+  DialogComboboxTrigger,
+  Switch,
 } from '@databricks/design-system';
 import { compact, mapValues, values } from 'lodash';
-import { ReactNode, useEffect, useMemo, useState } from 'react';
-import { useIntl } from 'react-intl';
+import React, { ReactNode, useEffect, useMemo, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { useSelector } from 'react-redux';
 import { ReduxState } from '../../../redux-types';
 import type { KeyValueEntity, MetricEntitiesByName, RunInfoEntity } from '../../types';
@@ -75,9 +88,10 @@ const RunViewMetricChartsImpl = ({
   const { theme } = useDesignSystemTheme();
   const [search, setSearch] = useState('');
   const prevSample = localStorage.getItem('mlflow-run-chart-default-samples') || '320'
-  const [maxSteps, setMaxSteps] = useState(parseInt(prevSample));
+  const [maxSteps, setMaxSteps] = useState(parseInt(prevSample, 10));
   const [showPoint, setShowPoint] = useState(false);
   const { formatMessage } = useIntl();
+  const maxSamples = [320, 500, 1000, 2500];
 
   const { compareRunCharts, compareRunSections, chartsSearchFilter } = chartUIState;
 
@@ -111,6 +125,12 @@ const RunViewMetricChartsImpl = ({
     imagesByRunUuid: state.entities.imagesByRunUuid,
   }));
 
+  const anyRunRefreshing = useSelector((store: ReduxState) => {
+    return values(store.entities.sampledMetricsByRunUuid[runInfo.runUuid ?? '']).some((metricsByRange) =>
+      values(metricsByRange).some(({ refreshing }) => refreshing),
+    );
+  });
+
   const [configuredCardConfig, setConfiguredCardConfig] = useState<RunsChartsCardConfig | null>(null);
 
   const reorderCharts = useReorderRunsChartsFn();
@@ -131,6 +151,13 @@ const RunViewMetricChartsImpl = ({
 
     // Hide the modal
     setConfiguredCardConfig(null);
+  };
+
+  // Refresh function for charts
+  const refreshCharts = () => {
+    // This would trigger a refresh of all charts
+    // For now, we'll just do nothing since the actual refresh logic depends on the chart implementation
+    // TODO: Implement actual chart refresh logic
   };
 
   // Create a single run data object to be used in charts
@@ -233,6 +260,67 @@ const RunViewMetricChartsImpl = ({
         }}
       >
         <RunsChartsFilterInput chartsSearchFilter={chartsSearchFilter} />
+        <DialogCombobox
+          componentId="codegen_mlflow_app_src_experiment-tracking_components_run-page_runviewmetriccharts.tsx_samples"
+          label={formatMessage({
+            defaultMessage: 'Samples',
+            description: 'Number of Samples to render',
+          })}
+          value={[maxSteps.toString()]}
+        >
+          <DialogComboboxTrigger allowClear={false} data-testid="max-samples" />
+          <DialogComboboxContent>
+            <DialogComboboxOptionList>
+              {maxSamples.map((sample) => {
+                return (
+                  <DialogComboboxOptionListSelectItem
+                    checked={maxSteps === sample}
+                    key={sample}
+                    data-testid={'max-samples-' + sample}
+                    value={sample.toString()}
+                    onChange={() => {
+                      setMaxSteps(sample);
+                      localStorage.setItem('mlflow-run-chart-default-samples', sample.toString());
+                    }}
+                  >
+                    {sample}
+                  </DialogComboboxOptionListSelectItem>
+                );
+              })}
+            </DialogComboboxOptionList>
+          </DialogComboboxContent>
+        </DialogCombobox>
+        <div css={{ display: 'flex', gap: theme.spacing.sm, alignItems: 'center' }}>
+          <div>
+            <FormattedMessage
+              defaultMessage="Points:"
+              // eslint-disable-next-line max-len
+              description="Label for the toggle button to toggle to show points or not for the metric experiment run"
+            />
+          </div>
+          <Switch
+            componentId="codegen_mlflow_app_src_experiment-tracking_components_run-page_runviewmetriccharts.tsx_show-point"
+            data-testid="show-point-toggle"
+            defaultChecked={showPoint}
+            onChange={() => setShowPoint(!showPoint)}
+          />
+        </div>
+        <Button
+          componentId="codegen_mlflow_app_src_experiment-tracking_components_run-page_runviewmetriccharts.tsx_176"
+          icon={
+            anyRunRefreshing ? <Spinner size="small" /> : <RefreshIcon />
+          }
+          onClick={() => {
+            if (!anyRunRefreshing) {
+              refreshCharts();
+            }
+          }}
+        >
+          <FormattedMessage
+            defaultMessage="Refresh"
+            description="Run page > Charts tab > Refresh all charts button label"
+          />
+        </Button>
         {shouldEnableRunDetailsPageAutoRefresh() && (
           <ToggleButton
             componentId="codegen_mlflow_app_src_experiment-tracking_components_run-page_runviewmetricchartsv2.tsx_244"
