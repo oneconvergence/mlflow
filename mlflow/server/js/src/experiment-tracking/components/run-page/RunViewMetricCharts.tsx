@@ -1,11 +1,21 @@
 import {
+  Empty,
+  Input,
+  SearchIcon,
+  Spacer,
   TableSkeleton,
   ToggleButton,
   useDesignSystemTheme,
+  DialogCombobox,
+  DialogComboboxContent,
+  DialogComboboxOptionList,
+  DialogComboboxOptionListSelectItem,
+  DialogComboboxTrigger,
+  Switch,
 } from '@databricks/design-system';
 import { compact, mapValues, values } from 'lodash';
-import { ReactNode, useEffect, useMemo, useState } from 'react';
-import { useIntl } from 'react-intl';
+import React, { ReactNode, useEffect, useMemo, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { useSelector } from 'react-redux';
 import { ReduxState } from '../../../redux-types';
 import type { KeyValueEntity, MetricEntitiesByName, RunInfoEntity } from '../../types';
@@ -66,18 +76,24 @@ const RunViewMetricChartsImpl = ({
   latestMetrics = {},
   params = {},
   tags = {},
+  maxSteps,
+  setMaxSteps,
+  showPoint,
+  setShowPoint,
 }: RunViewMetricChartsProps & {
   chartUIState: ExperimentRunsChartsUIConfiguration;
   updateChartsUIState: (
     stateSetter: (state: ExperimentRunsChartsUIConfiguration) => ExperimentRunsChartsUIConfiguration,
   ) => void;
+  maxSteps: number;
+  setMaxSteps: (value: number) => void;
+  showPoint: boolean;
+  setShowPoint: (value: boolean) => void;
 }) => {
   const { theme } = useDesignSystemTheme();
   const [search, setSearch] = useState('');
-  const prevSample = localStorage.getItem('mlflow-run-chart-default-samples') || '320'
-  const [maxSteps, setMaxSteps] = useState(parseInt(prevSample));
-  const [showPoint, setShowPoint] = useState(false);
   const { formatMessage } = useIntl();
+  const maxSamples = [320, 500, 1000, 2500];
 
   const { compareRunCharts, compareRunSections, chartsSearchFilter } = chartUIState;
 
@@ -111,6 +127,7 @@ const RunViewMetricChartsImpl = ({
     imagesByRunUuid: state.entities.imagesByRunUuid,
   }));
 
+
   const [configuredCardConfig, setConfiguredCardConfig] = useState<RunsChartsCardConfig | null>(null);
 
   const reorderCharts = useReorderRunsChartsFn();
@@ -132,6 +149,7 @@ const RunViewMetricChartsImpl = ({
     // Hide the modal
     setConfiguredCardConfig(null);
   };
+
 
   // Create a single run data object to be used in charts
   const chartData: RunsChartsRunData[] = useMemo(
@@ -233,6 +251,51 @@ const RunViewMetricChartsImpl = ({
         }}
       >
         <RunsChartsFilterInput chartsSearchFilter={chartsSearchFilter} />
+        <DialogCombobox
+          componentId="codegen_mlflow_app_src_experiment-tracking_components_run-page_runviewmetriccharts.tsx_samples"
+          label={formatMessage({
+            defaultMessage: 'Samples',
+            description: 'Number of Samples to render',
+          })}
+          value={[maxSteps.toString()]}
+        >
+          <DialogComboboxTrigger allowClear={false} data-testid="max-samples" />
+          <DialogComboboxContent>
+            <DialogComboboxOptionList>
+              {maxSamples.map((sample) => {
+                return (
+                  <DialogComboboxOptionListSelectItem
+                    checked={maxSteps === sample}
+                    key={sample}
+                    data-testid={'max-samples-' + sample}
+                    value={sample.toString()}
+                    onChange={() => {
+                      setMaxSteps(sample);
+                      localStorage.setItem('mlflow-run-chart-default-samples', sample.toString());
+                    }}
+                  >
+                    {sample}
+                  </DialogComboboxOptionListSelectItem>
+                );
+              })}
+            </DialogComboboxOptionList>
+          </DialogComboboxContent>
+        </DialogCombobox>
+        <div css={{ display: 'flex', gap: theme.spacing.sm, alignItems: 'center' }}>
+          <div>
+            <FormattedMessage
+              defaultMessage="Points:"
+              // eslint-disable-next-line max-len
+              description="Label for the toggle button to toggle to show points or not for the metric experiment run"
+            />
+          </div>
+          <Switch
+            componentId="codegen_mlflow_app_src_experiment-tracking_components_run-page_runviewmetriccharts.tsx_show-point"
+            data-testid="show-point-toggle"
+            defaultChecked={showPoint}
+            onChange={() => setShowPoint(!showPoint)}
+          />
+        </div>
         {shouldEnableRunDetailsPageAutoRefresh() && (
           <ToggleButton
             componentId="codegen_mlflow_app_src_experiment-tracking_components_run-page_runviewmetricchartsv2.tsx_244"
@@ -314,6 +377,10 @@ export const RunViewMetricCharts = (props: RunViewMetricChartsProps) => {
     [persistenceIdentifier],
   );
 
+  const prevSample = localStorage.getItem('mlflow-run-chart-default-samples') || '320'
+  const [maxSteps, setMaxSteps] = useState(parseInt(prevSample, 10));
+  const [showPoint, setShowPoint] = useState(false);
+
   const [chartUIState, updateChartsUIState] = useState<ExperimentRunsChartsUIConfiguration>(() => {
     const defaultChartState: ExperimentRunsChartsUIConfiguration = {
       isAccordionReordered: false,
@@ -325,6 +392,8 @@ export const RunViewMetricCharts = (props: RunViewMetricChartsProps) => {
         xAxisKey: RunsChartsLineChartXAxisType.STEP,
         lineSmoothness: 0,
         selectedXAxisMetricKey: '',
+        maxResults: maxSteps,
+        displayPoints: showPoint,
       },
     };
     try {
@@ -343,9 +412,21 @@ export const RunViewMetricCharts = (props: RunViewMetricChartsProps) => {
     localStore.setItem('chartUIState', JSON.stringify(chartUIState));
   }, [chartUIState, localStore]);
 
+  // Update globalLineChartConfig when maxSteps or showPoint changes
+  useEffect(() => {
+    updateChartsUIState((current) => ({
+      ...current,
+      globalLineChartConfig: {
+        ...current.globalLineChartConfig,
+        maxResults: maxSteps,
+        displayPoints: showPoint,
+      },
+    }));
+  }, [maxSteps, showPoint, updateChartsUIState]);
+
   return (
     <RunsChartsUIConfigurationContextProvider updateChartsUIState={updateChartsUIState}>
-      <RunViewMetricChartsImpl {...props} chartUIState={chartUIState} updateChartsUIState={updateChartsUIState} />
+      <RunViewMetricChartsImpl {...props} chartUIState={chartUIState} updateChartsUIState={updateChartsUIState} maxSteps={maxSteps} setMaxSteps={setMaxSteps} showPoint={showPoint} setShowPoint={setShowPoint} />
     </RunsChartsUIConfigurationContextProvider>
   );
 };
