@@ -67,6 +67,8 @@ export const normalizeMetricsHistoryEntry = ({ key, timestamp, value, step }: Me
   timestamp: timestamp,
 });
 
+
+
 /**
  * Compares two numbers, being able to return "true" if
  * two NaN values are given.
@@ -352,6 +354,7 @@ export const truncateChartMetricString = (fullStr: string, strLen: number) => {
 };
 
 const systemMetricPrefix = new RegExp(`^${MLFLOW_SYSTEM_METRIC_PREFIX}`);
+export const normalizeChartMetricKey = (metricKey: string) => metricKey.replace(systemMetricPrefix, '');
 
 export const isSystemMetricKey = (metricKey: string) => metricKey.match(systemMetricPrefix);
 

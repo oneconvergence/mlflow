@@ -60,7 +60,7 @@ export class CollapsibleTagsCell extends React.Component<Props, State> {
           const tooltipContent = value === '' ? tagName : `${tagName}: ${value}`;
           return (
             <div className='tag-cell-item truncate-text single-line' key={tagName}>
-              <Tooltip title={tooltipContent} placement='bottom'>
+              <Tooltip componentId="mlflow.collapsible_tags_cell.tag_cell.tooltip" content={tooltipContent}>
                 <span css={styles.overflowWithEllipsis}>
                   {value === '' ? (
                     <span className='tag-name'>{tagName}</span>

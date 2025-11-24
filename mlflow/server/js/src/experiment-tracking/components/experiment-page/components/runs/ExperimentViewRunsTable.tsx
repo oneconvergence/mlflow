@@ -42,6 +42,7 @@ import {
   createExperimentPageSearchFacetsState,
   ExperimentPageSearchFacetsState,
 } from '../../models/ExperimentPageSearchFacetsState';
+import { RUNS_VISIBILITY_MODE } from '../../../experiment-page/models/ExperimentPageUIState';
 import { useExperimentTableSelectRowHandler } from '../../hooks/useExperimentTableSelectRowHandler';
 import { useToggleRowVisibilityCallback } from '../../hooks/useToggleRowVisibilityCallback';
 import { ExperimentViewRunsTableHeaderContextProvider } from './ExperimentViewRunsTableHeaderContext';

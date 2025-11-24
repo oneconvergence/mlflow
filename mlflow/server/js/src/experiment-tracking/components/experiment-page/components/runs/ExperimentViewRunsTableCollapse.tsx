@@ -73,7 +73,8 @@ export const ExperimentViewRunsTableCollapse = ({
         }}
       >
         <Button
-          onClick={() => updateViewState({ runListHidden: !runListHidden })}
+          componentId='mlflow.experiement_view_runs_table_collapse.table.button'
+          onClick={() => updateViewState({ previewPaneVisible: !runListHidden })}
           icon={runListHidden ? <ChevronRightIcon /> : <ChevronLeftIcon />}
           size='small'
         />

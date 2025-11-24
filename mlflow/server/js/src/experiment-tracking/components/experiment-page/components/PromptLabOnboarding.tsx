@@ -35,6 +35,7 @@ export const PromptLabOnboarding = ({ onDismissed }: { onDismissed?: () => void 
 
   return (
     <Modal
+      componentId="mlflow.prompt_lab_onboarding.intro.modal"
       visible={modalVisible}
       onCancel={closeModal}
       onOk={closeModal}
@@ -46,7 +47,7 @@ export const PromptLabOnboarding = ({ onDismissed }: { onDismissed?: () => void 
               description='"Learn more" button in the modal for the prompt engineering onboarding'
             />
           </Button> */}
-          <Button onClick={closeModal} type='primary'>
+          <Button componentId="mlflow.try_it_now.intro.button" onClick={closeModal} type='primary'>
             <FormattedMessage
               defaultMessage='Try it now'
               description='"Try it now" button in the modal for the prompt engineering onboarding'

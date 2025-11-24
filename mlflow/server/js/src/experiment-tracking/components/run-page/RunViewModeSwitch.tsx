@@ -69,6 +69,10 @@ export const RunViewModeSwitch = () => {
         />
       )}
       <LegacyTabs.TabPane
+        tab={<FormattedMessage defaultMessage="Logs" description="Run details page > tab selector > Logs tab" />}
+        key={RunPageTabName.LOGS}
+      />
+      <LegacyTabs.TabPane
         tab={
           <FormattedMessage defaultMessage="Artifacts" description="Run details page > tab selector > artifacts tab" />
         }

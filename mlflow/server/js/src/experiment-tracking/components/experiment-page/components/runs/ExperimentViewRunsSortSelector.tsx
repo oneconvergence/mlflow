@@ -92,7 +92,7 @@ export const ExperimentViewRunsSortSelector = React.memo(
     };
 
     return (
-      <DialogCombobox label={currentSortSelectLabel}>
+      <DialogCombobox componentId="mlflow.experiment_view_runs_sort_selector.sort.dialog" label={currentSortSelectLabel}>
         <DialogComboboxTrigger onClear={handleClear} data-test-id='sort-select-dropdown' />
         <DialogComboboxContent minWidth={250}>
           <DialogComboboxOptionList>

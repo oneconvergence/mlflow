@@ -143,6 +143,7 @@ export class SearchTreeImpl extends React.Component<SearchTreeImplProps, SearchT
     return (
       <div>
         <Input
+          componentId="mlflow.search_tree.search.input"
           css={{ marginBottom: 8 }}
           placeholder={intl.formatMessage({
             defaultMessage: 'Search',
