@@ -37,6 +37,8 @@
 - [Setup Script Removal](#setup-script-removal)
 - [Type Updates](#type-updates)
 
+### Docker Image Build
+- [Image Build](#image-build)
 ---
 
 ## New Features
@@ -197,6 +199,15 @@
   - Added `UpdateExperimentSearchFacetsFn` type export
   - Added import for `RUNS_VISIBILITY_MODE` enum
 
+## Docker Image Build
+### Image Build
+1. **Clone the Git Repository**
+   - Repository URL: [MLFlow GitHub Repo](https://github.com/oneconvergence/mlflow)
+   - Branch: `d3x-v2.21.2`
+2. **Build**
+   ```bash
+   sudo docker build -t <image-name>:<tag> .
+   ```
 ---
 
 ## Running MLFLOW Locally
