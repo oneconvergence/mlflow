@@ -197,3 +197,40 @@
   - Added `UpdateExperimentSearchFacetsFn` type export
   - Added import for `RUNS_VISIBILITY_MODE` enum
 
+---
+
+## Running MLFLOW Locally
+
+### Steps
+
+1. **Clone the Git Repository**
+   - Repository URL: [MLFlow GitHub Repo](https://github.com/oneconvergence/mlflow)
+   - Branch: `d3x-v2.21.2`
+
+2. **Navigate to the Project Directory**
+   ```bash
+   cd mlflow/server/js
+   ```
+
+3. **Install Dependencies**
+   ```bash
+   yarn install
+   ```
+
+4. **Add Proxy in package.json**
+   ```json
+   "proxy": "your.domain.and.port"
+   ```
+
+5. **Login to dkubex and add _oauth2_proxy in cookies**
+   - `_oauth2_proxy`: <_oauth2_proxy cookie from dkubex user>
+
+6. **Modify FetchUtils.ts**
+   - Navigate to `mlflow/server/js/src/common/utils/FetchUtils.ts`
+   - Update the `getAjaxUrl` function as follows:
+   ```typescript
+   export const getAjaxUrl = (relativeUrl: any) => {
+     return '/mlflow/' + relativeUrl;
+   };
+   ```
+
