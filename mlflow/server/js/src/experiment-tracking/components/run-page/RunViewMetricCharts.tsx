@@ -127,7 +127,6 @@ const RunViewMetricChartsImpl = ({
     imagesByRunUuid: state.entities.imagesByRunUuid,
   }));
 
-
   const [configuredCardConfig, setConfiguredCardConfig] = useState<RunsChartsCardConfig | null>(null);
 
   const reorderCharts = useReorderRunsChartsFn();
@@ -149,7 +148,6 @@ const RunViewMetricChartsImpl = ({
     // Hide the modal
     setConfiguredCardConfig(null);
   };
-
 
   // Create a single run data object to be used in charts
   const chartData: RunsChartsRunData[] = useMemo(

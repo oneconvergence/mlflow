@@ -305,7 +305,7 @@ export class ExperimentListView extends Component<Props, State> {
           experimentName={this.state.selectedExperimentName}
         />
         <div>
-        <ProjectListView experiments={this.props.experiments} project={this.state.project} handleProjectChange={this.handleProjectChange}/>	
+        <ProjectListView experiments={this.props.experiments} project={this.state.project} handleProjectChange={this.handleProjectChange}/>
         <div
           css={{
             display: 'flex',

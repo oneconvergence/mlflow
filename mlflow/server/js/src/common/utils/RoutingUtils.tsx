@@ -54,7 +54,6 @@ export {
   MemoryRouter,
   HashRouter,
   Link,
-  NavLink,
   useNavigate,
   useLocation,
   useParams,

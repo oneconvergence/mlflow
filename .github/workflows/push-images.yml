@@ -6,9 +6,6 @@ on:
       - published
       - edited
 
-permissions:
-  contents: read
-
 jobs:
   push-images:
     runs-on: ubuntu-latest
@@ -16,7 +13,7 @@ jobs:
     permissions:
       packages: write # to push to ghcr.io
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: ./.github/actions/setup-python
 
@@ -67,7 +64,7 @@ jobs:
 
       - name: Build Model Server Image
         run: |
-          pip install -e .
+          pip install .
           mlflow models build-docker -n model-server:latest --mlflow-home `pwd`
 
       - name: Push Model Server Image

@@ -2,13 +2,18 @@ name: Lint
 
 on:
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
   push:
     branches:
       - master
       - branch-[0-9]+.[0-9]+
-
-permissions:
-  contents: read
+  merge_group:
+    types:
+      - checks_requested
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
@@ -25,33 +30,36 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions: {}
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/untracked
       - uses: ./.github/actions/setup-python
         id: setup-python
       - name: Add problem matchers
         run: |
-          echo "::add-matcher::.github/workflows/matchers/pylint.json"
-          echo "::add-matcher::.github/workflows/matchers/black.json"
+          echo "::add-matcher::.github/workflows/matchers/clint.json"
+          echo "::add-matcher::.github/workflows/matchers/format.json"
           echo "::add-matcher::.github/workflows/matchers/ruff.json"
-      - uses: ./.github/actions/cache-pip
+          echo "::add-matcher::.github/workflows/matchers/typos.json"
       - name: Install dependencies
         run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          source ./dev/install-common-deps.sh --ml
-          pip install -r requirements/lint-requirements.txt
+          uv pip install --system -r requirements/lint-requirements.txt
+          dev/install-taplo.sh
+          dev/install-typos.sh
+          mkdir -p /tmp/conftest/bin
+          curl -s -L "https://github.com/open-policy-agent/conftest/releases/download/v0.56.0/conftest_0.56.0_Linux_x86_64.tar.gz" | tar -xz -C /tmp/conftest/bin
+          echo "/tmp/conftest/bin" >> $GITHUB_PATH
+      - uses: ./.github/actions/show-versions
       - uses: ./.github/actions/pipdeptree
       - name: Install pre-commit hooks
         run: |
-          source .venv/bin/activate
-          pre-commit install -t pre-commit -t prepare-commit-msg
+          pre-commit install
       - name: Run pre-commit
         id: pre-commit
         env:
           IS_MAINTAINER: ${{ contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association )}}
+          NO_FIX: "true"
         run: |
-          source .venv/bin/activate
           pre-commit run --all-files
