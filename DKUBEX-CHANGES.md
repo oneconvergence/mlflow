@@ -203,7 +203,7 @@
 ### Image Build
 1. **Clone the Git Repository**
    - Repository URL: [MLFlow GitHub Repo](https://github.com/oneconvergence/mlflow)
-   - Branch: `d3x-v2.21.2`
+   - Branch: `d3x-tag-v2.21.2`
 2. **Build**
    ```bash
    sudo docker build -t <image-name>:<tag> .
@@ -216,7 +216,7 @@
 
 1. **Clone the Git Repository**
    - Repository URL: [MLFlow GitHub Repo](https://github.com/oneconvergence/mlflow)
-   - Branch: `d3x-v2.21.2`
+   - Branch: `d3x-tag-v2.21.2`
 
 2. **Navigate to the Project Directory**
    ```bash
