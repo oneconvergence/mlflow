@@ -11,6 +11,7 @@ import { RenameRunModal } from '../modals/RenameRunModal';
 import { RunViewArtifactTab } from './RunViewArtifactTab';
 import { RunViewHeader } from './RunViewHeader';
 import { RunViewOverview } from './RunViewOverview';
+import GrafanaIframe from './GrafanaIframe';
 import { useRunDetailsPageData } from './hooks/useRunDetailsPageData';
 import { useRunViewActiveTab } from './useRunViewActiveTab';
 import { ReduxState } from '../../../redux-types';
@@ -133,6 +134,8 @@ export const RunPage = () => {
             artifactUri={runInfo.artifactUri ?? undefined}
           />
         );
+      case RunPageTabName.LOGS:
+        return <GrafanaIframe runUuid={runUuid} width="100%" height="760px" />
       case RunPageTabName.TRACES:
         if (shouldEnableRunDetailsPageTracesTab()) {
           return <RunViewTracesTab runUuid={runUuid} runTags={tags} experimentId={experimentId} />;

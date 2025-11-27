@@ -40,6 +40,8 @@ export const shouldEnableChartExpressions = () => false;
  */
 export const shouldEnableToggleIndividualRunsInGroups = () => false;
 
+export const shouldEnableDeepLearningUI = () => false;
+
 /**
  * Update relative time axis to use date
  */
@@ -62,6 +64,8 @@ export const isUnstableNestedComponentsMigrated = () => true;
  * Determines if logged models UI (part of model-centric IA shift) is enabled
  */
 export const isExperimentLoggedModelsUIEnabled = () => false;
+
+export const shouldEnableExperimentDatasetTracking = () => false;
 
 /**
  * Determines if evaluation results online monitoring UI is enabled

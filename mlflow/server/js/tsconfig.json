@@ -42,7 +42,5 @@
     "isolatedModules": true
   },
   "references": [],
-  "include": [
-    "./src/**/*"
-  ]
+  "include": []
 }
