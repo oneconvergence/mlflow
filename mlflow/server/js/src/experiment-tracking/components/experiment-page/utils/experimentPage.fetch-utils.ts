@@ -223,3 +223,5 @@ export const isSearchFacetsFilterUsed = (currentSearchFacetsState: ExperimentPag
       startTime !== DEFAULT_START_TIME,
   );
 };
+
+export const shouldRefetchRuns = () => true;

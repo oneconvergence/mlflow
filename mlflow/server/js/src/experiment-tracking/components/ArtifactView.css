@@ -3,6 +3,12 @@ div.mlflow-artifact-view {
   overflow: hidden;
 }
 
+.artifact-view {
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
 .mlflow-artifact-left {
   min-width: 200px;
   max-width: 400px;
