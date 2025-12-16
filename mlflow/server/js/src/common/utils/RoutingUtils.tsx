@@ -35,7 +35,6 @@ import {
 /**
  * Import React Router V5 parts
  */
-import { HashRouter as HashRouterV5, Link as LinkV5, NavLink as NavLinkV5 } from 'react-router-dom';
 import type { ComponentProps } from 'react';
 import React from 'react';
 
@@ -61,6 +60,7 @@ export {
   MemoryRouter,
   HashRouter,
   Link,
+  NavLink,
   useNavigate,
   useLocation,
   useParams,
