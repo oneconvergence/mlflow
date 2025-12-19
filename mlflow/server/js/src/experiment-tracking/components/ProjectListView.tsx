@@ -58,6 +58,7 @@ export class ProjectListView extends Component<Props, State> {
           Projects
         </Typography.Title>
         <DialogCombobox
+            componentId="mlflow.project_list.project_selector"
             label={this.props.project}
           >
             <DialogComboboxTrigger
