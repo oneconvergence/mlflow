@@ -291,7 +291,7 @@ const RunViewMetricChartsImpl = ({
           <Switch
             componentId="codegen_mlflow_app_src_experiment-tracking_components_run-page_runviewmetriccharts.tsx_show-point"
             data-testid="show-point-toggle"
-            defaultChecked={showPoint}
+            checked={showPoint}
             onChange={() => setShowPoint(!showPoint)}
           />
         </div>
@@ -363,6 +363,7 @@ const RunViewMetricChartsImpl = ({
         tooltipComponent={RunViewChartTooltipBody}
         autoRefreshEnabled={autoRefreshEnabled}
         groupBy={null}
+        globalLineChartConfig={chartUIState.globalLineChartConfig}
       />
     </div>
   );
