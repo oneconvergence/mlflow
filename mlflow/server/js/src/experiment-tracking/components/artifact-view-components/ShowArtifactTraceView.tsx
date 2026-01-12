@@ -101,6 +101,8 @@ class ShowArtifactTraceView extends Component<ShowArtifactTraceViewProps, ShowAr
             data = pako.ungzip(uint8Array, { to: 'string' });
           } catch (error) {
             console.error('Decompression error:', error);
+            this.setState({ error: error, loading: false, path: this.props.path });
+            return;
           }
         } else {
           data = new TextDecoder().decode(uint8Array);
@@ -127,4 +129,3 @@ class ShowArtifactTraceView extends Component<ShowArtifactTraceViewProps, ShowAr
 }
 
 export default ShowArtifactTraceView;
-
