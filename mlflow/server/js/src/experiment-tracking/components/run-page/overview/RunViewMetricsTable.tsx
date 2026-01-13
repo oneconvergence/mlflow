@@ -18,7 +18,7 @@ import { Link } from '../../../../common/utils/RoutingUtils';
 import Routes from '../../../routes';
 import { RunPageTabName } from '../../../constants';
 import { FormattedMessage, defineMessages, useIntl } from 'react-intl';
-import { isSystemMetricKey } from '../../../utils/MetricsUtils';
+import { isSystemMetricKey, normalizeChartMetricKey } from '../../../utils/MetricsUtils';
 import type { ColumnDef, Table as TableDef } from '@tanstack/react-table';
 import { flexRender, getCoreRowModel } from '@tanstack/react-table';
 import type { UseGetRunQueryResponseRunInfo } from '../hooks/useGetRunQuery';
@@ -39,7 +39,8 @@ const { systemMetricsLabel, modelMetricsLabel } = defineMessages({
 const metricKeyMatchesFilter =
   (filter: string) =>
   ({ key }: MetricEntity) =>
-    key.toLowerCase().includes(filter.toLowerCase());
+    key.toLowerCase().includes(filter.toLowerCase()) ||
+    normalizeChartMetricKey(key).toLowerCase().includes(filter.toLowerCase());
 
 interface MetricEntityWithLoggedModels extends MetricEntity {
   loggedModels?: LoggedModelProto[];

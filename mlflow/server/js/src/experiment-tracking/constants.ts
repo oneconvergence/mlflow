@@ -104,6 +104,7 @@ export enum RunPageTabName {
   SYSTEM_METRIC_CHARTS = 'system-metrics',
   ARTIFACTS = 'artifacts',
   EVALUATIONS = 'evaluations',
+  LOGS = 'logs',
 }
 
 export const MLFLOW_SYSTEM_METRIC_PREFIX = 'system/';

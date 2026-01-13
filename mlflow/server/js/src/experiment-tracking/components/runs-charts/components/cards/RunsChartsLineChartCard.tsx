@@ -190,7 +190,7 @@ export const RunsChartsLineChartCard = ({
     runUuids: runUuidsToFetch,
     metricKeys,
     enabled: isInViewportDeferred,
-    maxResults: 320,
+    maxResults: globalLineChartConfig?.maxResults ?? 320,
     range: stepRange,
     autoRefreshEnabled,
   });
@@ -338,7 +338,7 @@ export const RunsChartsLineChartCard = ({
           xRange={xRangeLocal}
           yRange={yRangeLocal}
           fullScreen={fullScreen}
-          displayPoints={config.displayPoints}
+          displayPoints={globalLineChartConfig?.displayPoints ?? config.displayPoints}
           onSetDownloadHandler={setImageDownloadHandler}
           positionInSection={positionInSection ?? 0}
         />

@@ -321,6 +321,8 @@ export type ExperimentCategorizedUncheckedKeys = {
  */
 export type UpdateExperimentViewStateFn = (newPartialViewState: Partial<ExperimentPageViewState>) => void;
 
+export type UpdateExperimentSearchFacetsFn = any;
+
 /**
  * Enum representing the different types of dataset sources.
  */
